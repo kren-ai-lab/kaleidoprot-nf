@@ -1,0 +1,16 @@
+# Nextflow
+work/
+.nextflow/
+.nextflow.log*
+results*/
+null/
+
+# Test data (fetched with examples/test/fetch_test_data.py)
+examples/test/data/
+
+# Python
+__pycache__/
+*.egg-info/
+.venv/
+.pytest_cache/
+.ruff_cache/

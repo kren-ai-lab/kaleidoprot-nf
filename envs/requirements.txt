@@ -1,0 +1,15 @@
+# Single environment for the local profile (Python 3.13: biotraj has no cp314 wheel).
+#   uv venv -p 3.13 .venv && source .venv/bin/activate
+#   uv pip install -r envs/requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu   # CPU torch
+#
+# Eris and Roxy come from `dev` until the release that includes eris#13 (batch exit code) and
+# roxy#9 (families in --config) reaches PyPI.
+sylphy[embeddings] @ git+https://github.com/kren-ai-lab/sylphy.git@dev
+roxylib @ git+https://github.com/kren-ai-lab/roxy.git@dev
+erislib @ git+https://github.com/kren-ai-lab/eris.git@dev
+ruddy @ git+https://github.com/kren-ai-lab/ruddy.git@dev
+-e ./python
+
+# typer 0.28+ breaks `sylphy validate-config` (rejects valid values) and `eris validate-config`
+# ('TyperOption' object has no attribute 'type'); the libraries only bound typer <1.
+typer>=0.27,<0.28

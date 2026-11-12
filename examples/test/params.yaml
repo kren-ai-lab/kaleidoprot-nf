@@ -1,0 +1,43 @@
+# W5 + minimal W6 prototype. Run from the repository root:
+#   nextflow run . -profile local,test -params-file examples/test/params.yaml
+#
+# representations: one entry per generated representation (fan-out).
+#   tool: sylphy-encode | sylphy-embed | roxy | eris
+#   config: the tool's own --config file, checked with `<tool> validate-config` before anything runs
+#   features_source (eris only): graph_attr | pooled_attr | global_embedding | auto
+representations:
+  - name: esm2_t6
+    tool: sylphy-embed
+    config: examples/test/configs/esm2_t6.yaml
+  - name: aa_frequency
+    tool: sylphy-encode
+    config: examples/test/configs/aa_frequency.yaml
+  - name: roxy_composition
+    tool: roxy
+    config: examples/test/configs/roxy_composition.yaml
+  - name: eris_contact
+    tool: eris
+    config: examples/test/configs/eris_contact.yaml
+    features_source: graph_attr
+
+# Pairwise comparison of representation spaces with `ruddy analyze representation`.
+comparisons: all
+
+# One-level compositions. Each block is raw, reduced (reduce: N PCA components with Ruddy) or
+# selected (select: true, unsupervised filter from the block's Ruddy EDA). scaling: none | standard | block
+compositions:
+  - name: esm_roxy
+    blocks:
+      - representation: esm2_t6
+        reduce: 6
+      - representation: roxy_composition
+        select: true
+    scaling: block
+  - name: sequence_structure
+    blocks:
+      - representation: esm2_t6
+        reduce: 3
+      - representation: aa_frequency
+      - representation: eris_contact
+        select: true
+    scaling: block

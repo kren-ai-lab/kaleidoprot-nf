@@ -1,0 +1,6 @@
+# sylphy embed: ESM2 8M, mean pooling per sequence. Use device: cuda and a larger model on a GPU host.
+model: facebook/esm2_t6_8M_UR50D
+pool: mean
+layers: last
+device: cpu
+batch_size: 8
