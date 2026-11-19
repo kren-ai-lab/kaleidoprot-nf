@@ -54,7 +54,13 @@ def concat_blocks(
         raise KpnfError(f"duplicated block names: {names}")
     recorder = Recorder(
         "concat",
-        {"blocks": names, "id_column": id_column, "scaling": scaling, "alignment": alignment, "separator": separator},
+        {
+            "blocks": names,
+            "id_column": id_column,
+            "scaling": scaling,
+            "alignment": alignment,
+            "separator": separator,
+        },
     )
 
     loaded = []
@@ -74,8 +80,12 @@ def concat_blocks(
     common = set.intersection(*id_sets)
     dropped = {name: sorted(set(ids) - common) for name, ids, _, _ in loaded if set(ids) - common}
     if dropped and alignment == "strict":
-        detail = "; ".join(f"{n}: {len(v)} id(s) not in every block (e.g. {', '.join(v[:3])})" for n, v in dropped.items())
-        raise KpnfError(f"blocks do not share the same ids ({detail}). Use alignment: partial to keep the intersection.")
+        detail = "; ".join(
+            f"{n}: {len(v)} id(s) not in every block (e.g. {', '.join(v[:3])})" for n, v in dropped.items()
+        )
+        raise KpnfError(
+            f"blocks do not share the same ids ({detail}). Use alignment: partial to keep the intersection."
+        )
     if not common:
         raise KpnfError("blocks share no ids")
 
@@ -88,7 +98,14 @@ def concat_blocks(
         parts.append(_scale(aligned, scaling, name))
         start = len(columns)
         columns.extend(f"{name}{separator}{f}" for f in features)
-        block_map.append({"block": name, "n_features": len(features), "first_column": start, "last_column": len(columns) - 1})
+        block_map.append(
+            {
+                "block": name,
+                "n_features": len(features),
+                "first_column": start,
+                "last_column": len(columns) - 1,
+            }
+        )
 
     matrix = np.hstack(parts)
     out_df = pl.DataFrame({id_column: order}).hstack(pl.DataFrame(matrix, schema=columns, orient="row"))

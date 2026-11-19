@@ -14,7 +14,6 @@ include { COMPOSE      } from './subworkflows/compose'
 include { KPNF_REPORT  } from './modules/kpnf'
 
 workflow {
-    main:
     def errors = checkParams(params)
     if (errors) {
         error("Invalid parameters:\n  - " + errors.join('\n  - '))
@@ -22,8 +21,7 @@ workflow {
 
     def reps = channel.fromList(params.representations)
         .map { r ->
-            [[name: r.name, tool: r.tool, features_source: r.features_source ?: 'auto'],
-             file(r.config, checkIfExists: true)]
+            [[name: r.name, tool: r.tool, features_source: r.features_source ?: 'auto'], file(r.config, checkIfExists: true)]
         }
     def sequences = channel.value(file(params.input, checkIfExists: true))
     def labels = channel.value(params.label_column ? file(params.input) : [])
@@ -33,10 +31,12 @@ workflow {
     if (params.structures) {
         def manifest_file = file(params.structures, checkIfExists: true)
         def base = manifest_file.parent
-        def files = manifest_file.splitCsv(header: true).collect { row ->
-            def p = row.path.toString()
-            p.startsWith('/') ? file(p, checkIfExists: true) : file(base.resolve(p).toString(), checkIfExists: true)
-        }
+        def files = manifest_file
+            .splitCsv(header: true)
+            .collect { row ->
+                def p = row.path.toString()
+                p.startsWith('/') ? file(p, checkIfExists: true) : file(base.resolve(p).toString(), checkIfExists: true)
+            }
         manifest = channel.value(manifest_file)
         structures = channel.value(files)
     }
@@ -83,7 +83,7 @@ def checkParams(p) {
         def where = "representations[${i}]"
         if (!(r instanceof Map)) {
             errors << "${where}: expected a map with name, tool and config"
-            return
+            return null
         }
         if (!(r.name ==~ NAME_PATTERN) || r.name.contains('__')) {
             errors << "${where}: name '${r.name}' must match ${NAME_PATTERN} and not contain '__'"
@@ -116,7 +116,7 @@ def checkParams(p) {
         comp_names << c.name
         if (!(c.blocks instanceof List) || c.blocks.size() < 2) {
             errors << "${where}: blocks needs at least two entries"
-            return
+            return null
         }
         def used = []
         c.blocks.eachWithIndex { b, j ->

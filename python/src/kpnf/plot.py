@@ -30,7 +30,9 @@ def plot_projection(
     if not scores_csv.is_file():
         raise KpnfError(f"{pca_dir}: pca_scores.csv not found; expected the output of `ruddy project pca`")
     recorder = Recorder("plot", {"title": title, "label_column": label_column, "id_column": id_column})
-    scores = pl.read_csv(scores_csv, schema_overrides={"id": pl.String}).rename({"id": id_column} if id_column != "id" else {})
+    scores = pl.read_csv(scores_csv, schema_overrides={"id": pl.String}).rename(
+        {"id": id_column} if id_column != "id" else {}
+    )
     if not {"PC1", "PC2"} <= set(scores.columns):
         raise KpnfError(f"{scores_csv}: a 2D plot needs PC1 and PC2")
     inputs = [scores_csv]

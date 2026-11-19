@@ -51,7 +51,11 @@ def _rank(column: np.ndarray) -> np.ndarray:
 
 
 def _abs_corr(matrix: np.ndarray, method: str) -> np.ndarray:
-    data = np.column_stack([_rank(matrix[:, j]) for j in range(matrix.shape[1])]) if method == "spearman" else matrix
+    data = (
+        np.column_stack([_rank(matrix[:, j]) for j in range(matrix.shape[1])])
+        if method == "spearman"
+        else matrix
+    )
     data = data.astype(float, copy=True)
     # Missing cells (only possible when max_missing > 0) take the column mean for this estimate only;
     # the output matrix keeps them as missing.
@@ -76,7 +80,9 @@ def _mode_fraction(column: np.ndarray) -> float:
 def _load_eda(eda_dir: Path) -> pl.DataFrame:
     columns_csv = eda_dir / "columns.csv"
     if not columns_csv.is_file():
-        raise KpnfError(f"{eda_dir}: columns.csv not found; expected the output of `ruddy inspect univariate`")
+        raise KpnfError(
+            f"{eda_dir}: columns.csv not found; expected the output of `ruddy inspect univariate`"
+        )
     eda = pl.read_csv(columns_csv).select("column", "missing_fraction", "is_constant")
     stats_csv = eda_dir / "numeric_statistics.csv"
     if stats_csv.is_file():
@@ -147,8 +153,11 @@ def select_block(
                 worst = int(np.argmax(corr[pos, kept_pos]))
                 rho = float(corr[pos, kept_pos[worst]])
                 if rho > settings.abs_rho:
-                    rows[j].update(reason="redundant", redundant_with=features[candidates[kept_pos[worst]]],
-                                   abs_rho=round(rho, 6))
+                    rows[j].update(
+                        reason="redundant",
+                        redundant_with=features[candidates[kept_pos[worst]]],
+                        abs_rho=round(rho, 6),
+                    )
                     continue
             if settings.max_features is not None and len(kept_pos) >= settings.max_features:
                 rows[j]["reason"] = "max_features"
