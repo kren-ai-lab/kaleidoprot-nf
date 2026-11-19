@@ -37,8 +37,13 @@ def _parser() -> argparse.ArgumentParser:
     s.add_argument("--max-features", type=int, default=None)
 
     s = sub.add_parser("concat", help="Align blocks by id, prefix columns and scale.")
-    s.add_argument("--block", action="append", required=True, metavar="NAME=PATH",
-                   help="Repeatable; order is kept in the output.")
+    s.add_argument(
+        "--block",
+        action="append",
+        required=True,
+        metavar="NAME=PATH",
+        help="Repeatable; order is kept in the output.",
+    )
     s.add_argument("--out", required=True)
     s.add_argument("--id-column", default="id")
     s.add_argument("--scaling", choices=["none", "standard", "block"], default="standard")
@@ -63,12 +68,18 @@ def _run(args: argparse.Namespace) -> dict | int:
     if args.command == "stage-manifest":
         from kpnf.manifest import stage_manifest
 
-        return {"rows": stage_manifest(args.manifest, args.out, path_column=args.path_column, prefix=args.prefix)}
+        return {
+            "rows": stage_manifest(args.manifest, args.out, path_column=args.path_column, prefix=args.prefix)
+        }
     if args.command == "select":
         from kpnf.select import SelectionSettings, select_block
 
-        settings = SelectionSettings(args.max_missing, args.near_constant, args.abs_rho, args.method, args.max_features)
-        return select_block(args.matrix, args.eda_dir, args.out, args.report, id_column=args.id_column, settings=settings)
+        settings = SelectionSettings(
+            args.max_missing, args.near_constant, args.abs_rho, args.method, args.max_features
+        )
+        return select_block(
+            args.matrix, args.eda_dir, args.out, args.report, id_column=args.id_column, settings=settings
+        )
     if args.command == "concat":
         from kpnf.concat import concat_blocks
 
@@ -78,12 +89,20 @@ def _run(args: argparse.Namespace) -> dict | int:
             if not sep or not name or not path:
                 raise KpnfError(f"--block expects NAME=PATH, got {spec!r}")
             blocks.append((name, path))
-        return concat_blocks(blocks, args.out, id_column=args.id_column, scaling=args.scaling, alignment=args.alignment)
+        return concat_blocks(
+            blocks, args.out, id_column=args.id_column, scaling=args.scaling, alignment=args.alignment
+        )
     if args.command == "plot":
         from kpnf.plot import plot_projection
 
-        return plot_projection(args.pca_dir, args.out, title=args.title, labels=args.labels,
-                               label_column=args.label_column, id_column=args.id_column)
+        return plot_projection(
+            args.pca_dir,
+            args.out,
+            title=args.title,
+            labels=args.labels,
+            label_column=args.label_column,
+            id_column=args.id_column,
+        )
     if args.command == "report":
         from kpnf.report import build_report
 

@@ -76,7 +76,9 @@ def _projections(root: Path) -> list[dict]:
                 "n_components": len(ratios),
                 "pc1": ratios[0] if ratios else None,
                 "pc2": ratios[1] if len(ratios) > 1 else None,
-                "cumulative": df.get_column("cumulative_explained_variance_ratio").to_list()[-1] if ratios else None,
+                "cumulative": df.get_column("cumulative_explained_variance_ratio").to_list()[-1]
+                if ratios
+                else None,
             }
         )
     return rows
@@ -149,7 +151,9 @@ def _table(rows: list[dict], columns: list[tuple[str, str]]) -> str:
     return head + body
 
 
-def build_report(results_dir: str | Path, out_dir: str | Path, *, title: str = "kaleidoprot-nf report") -> dict:
+def build_report(
+    results_dir: str | Path, out_dir: str | Path, *, title: str = "kaleidoprot-nf report"
+) -> dict:
     root, out_dir = Path(results_dir), Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     recorder = Recorder("report", {"title": title})
@@ -163,24 +167,81 @@ def build_report(results_dir: str | Path, out_dir: str | Path, *, title: str = "
     }
     md = [f"# {title}\n"]
     md.append("\n## Representations\n\n")
-    md.append(_table(summary["representations"], [("name", "Name"), ("tool", "Tool"), ("command", "Command"),
-                                                   ("n_rows", "Rows"), ("n_cols", "Features"), ("sha256", "sha256")]))
+    md.append(
+        _table(
+            summary["representations"],
+            [
+                ("name", "Name"),
+                ("tool", "Tool"),
+                ("command", "Command"),
+                ("n_rows", "Rows"),
+                ("n_cols", "Features"),
+                ("sha256", "sha256"),
+            ],
+        )
+    )
     md.append("\n## Feature selection\n\n")
-    md.append(_table(summary["selection"], [("composition", "Composition"), ("block", "Block"), ("n_in", "In"),
-                                            ("n_kept", "Kept"), ("dropped", "Dropped (reason: n)")]))
+    md.append(
+        _table(
+            summary["selection"],
+            [
+                ("composition", "Composition"),
+                ("block", "Block"),
+                ("n_in", "In"),
+                ("n_kept", "Kept"),
+                ("dropped", "Dropped (reason: n)"),
+            ],
+        )
+    )
     md.append("\n## Compositions\n\n")
-    md.append(_table(summary["compositions"], [("name", "Name"), ("blocks", "Blocks (features)"), ("n_rows", "Rows"),
-                                               ("n_cols", "Columns"), ("scaling", "Scaling"),
-                                               ("alignment", "Alignment"), ("dropped_ids", "Ids dropped")]))
+    md.append(
+        _table(
+            summary["compositions"],
+            [
+                ("name", "Name"),
+                ("blocks", "Blocks (features)"),
+                ("n_rows", "Rows"),
+                ("n_cols", "Columns"),
+                ("scaling", "Scaling"),
+                ("alignment", "Alignment"),
+                ("dropped_ids", "Ids dropped"),
+            ],
+        )
+    )
     md.append("\n## Projections (PCA)\n\n")
-    md.append(_table(summary["projections"], [("id", "Id"), ("n_components", "Components"), ("pc1", "PC1"),
-                                              ("pc2", "PC2"), ("cumulative", "Cumulative")]))
+    md.append(
+        _table(
+            summary["projections"],
+            [
+                ("id", "Id"),
+                ("n_components", "Components"),
+                ("pc1", "PC1"),
+                ("pc2", "PC2"),
+                ("cumulative", "Cumulative"),
+            ],
+        )
+    )
     md.append("\n## Representation comparisons\n\n")
-    md.append(_table(summary["comparisons"], [("x", "X"), ("y", "Y"), ("n", "n"), ("cka_linear", "CKA (linear)"),
-                                              ("cca_1", "CCA r1"), ("mantel_r", "Mantel r"), ("mantel_p", "Mantel p"),
-                                              ("distance_rho", "Distance rho"), ("procrustes", "Procrustes")]))
+    md.append(
+        _table(
+            summary["comparisons"],
+            [
+                ("x", "X"),
+                ("y", "Y"),
+                ("n", "n"),
+                ("cka_linear", "CKA (linear)"),
+                ("cca_1", "CCA r1"),
+                ("mantel_r", "Mantel r"),
+                ("mantel_p", "Mantel p"),
+                ("distance_rho", "Distance rho"),
+                ("procrustes", "Procrustes"),
+            ],
+        )
+    )
     md.append("\n## Figures\n\n")
-    md.extend(f"### {name.removesuffix('.png')}\n\n![{name}](figures/{name})\n\n" for name in summary["figures"])
+    md.extend(
+        f"### {name.removesuffix('.png')}\n\n![{name}](figures/{name})\n\n" for name in summary["figures"]
+    )
     # Copy the figures next to the report so the directory is self-contained.
     (out_dir / "figures").mkdir(exist_ok=True)
     for name in summary["figures"]:
@@ -189,6 +250,10 @@ def build_report(results_dir: str | Path, out_dir: str | Path, *, title: str = "
     report_md.write_text("".join(md), encoding="utf-8")
     summary_json = out_dir / "summary.json"
     summary_json.write_text(json.dumps(summary, indent=2, default=str) + "\n", encoding="utf-8")
-    recorder.write(report_md, inputs=[], outputs=[(report_md, {}), (summary_json, {})],
-                   extensions={k: len(v) for k, v in summary.items()})
+    recorder.write(
+        report_md,
+        inputs=[],
+        outputs=[(report_md, {}), (summary_json, {})],
+        extensions={k: len(v) for k, v in summary.items()},
+    )
     return summary

@@ -37,7 +37,9 @@ def write_table(df: pl.DataFrame, path: str | Path) -> Path:
 def split_matrix(df: pl.DataFrame, id_column: str, *, source: str) -> tuple[list[str], list[str], np.ndarray]:
     """Return ids, feature names and a float matrix. Ids must exist, be non-empty and unique."""
     if id_column not in df.columns:
-        raise KpnfError(f"{source}: id column {id_column!r} not found (columns: {', '.join(df.columns[:8])}...)")
+        raise KpnfError(
+            f"{source}: id column {id_column!r} not found (columns: {', '.join(df.columns[:8])}...)"
+        )
     ids = df.get_column(id_column).cast(pl.String)
     if ids.null_count() or (ids.str.len_chars() == 0).any():
         raise KpnfError(f"{source}: id column {id_column!r} has empty values")
