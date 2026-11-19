@@ -1,0 +1,30 @@
+name: kpnf-tests
+
+on:
+  push:
+    paths: ["python/**", ".github/workflows/kpnf-tests.yml"]
+  pull_request:
+    paths: ["python/**", ".github/workflows/kpnf-tests.yml"]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # oldest Python with the declared lower bounds, newest Python with the latest releases
+          - { python-version: "3.11", resolution: lowest-direct }
+          - { python-version: "3.14", resolution: highest }
+    defaults:
+      run:
+        working-directory: python
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: uv sync --extra test --resolution ${{ matrix.resolution }}
+      - name: Run tests
+        run: uv run --no-sync pytest -q
