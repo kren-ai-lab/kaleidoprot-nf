@@ -21,8 +21,13 @@ def _eda(df: pl.DataFrame, folder: Path) -> Path:
         col = df.get_column(c)
         if c == "id":
             continue
-        rows.append({"column": c, "missing_fraction": col.null_count() / df.height,
-                     "is_constant": col.drop_nulls().n_unique() <= 1})
+        rows.append(
+            {
+                "column": c,
+                "missing_fraction": col.null_count() / df.height,
+                "is_constant": col.drop_nulls().n_unique() <= 1,
+            }
+        )
         stats.append({"column": c, "variance": col.var()})
     pl.DataFrame(rows).write_csv(folder / "columns.csv")
     pl.DataFrame(stats).write_csv(folder / "numeric_statistics.csv")
@@ -34,15 +39,17 @@ def block(tmp_path: Path) -> tuple[Path, Path]:
     rng = np.random.default_rng(0)
     n = 40
     a = rng.normal(size=n)
-    df = pl.DataFrame({
-        "id": [f"s{i}" for i in range(n)],
-        "a": a,
-        "a_copy": a * 3 + 1,                      # redundant with a (|rho| = 1)
-        "b": rng.normal(size=n),
-        "const": np.ones(n),
-        "near": np.r_[np.zeros(n - 1), 1.0],  # 39 zeros and a single 1: mode fraction 0.975
-        "holes": [None if i % 4 == 0 else float(i) for i in range(n)],
-    })
+    df = pl.DataFrame(
+        {
+            "id": [f"s{i}" for i in range(n)],
+            "a": a,
+            "a_copy": a * 3 + 1,  # redundant with a (|rho| = 1)
+            "b": rng.normal(size=n),
+            "const": np.ones(n),
+            "near": np.r_[np.zeros(n - 1), 1.0],  # 39 zeros and a single 1: mode fraction 0.975
+            "holes": [None if i % 4 == 0 else float(i) for i in range(n)],
+        }
+    )
     path = tmp_path / "m.parquet"
     df.write_parquet(path)
     return path, _eda(df, tmp_path / "eda")
@@ -78,7 +85,9 @@ def _write(path: Path, ids, **cols) -> Path:
 
 def test_concat_prefix_order_and_block_scaling(tmp_path):
     x = _write(tmp_path / "x.csv", ["a", "b", "c"], p_0=[1.0, 2.0, 3.0], p_1=[0.0, 1.0, 5.0])
-    y = _write(tmp_path / "y.csv", ["c", "a", "b"], p_0=[9.0, 1.0, 4.0])  # same ids, other order, same column name
+    y = _write(
+        tmp_path / "y.csv", ["c", "a", "b"], p_0=[9.0, 1.0, 4.0]
+    )  # same ids, other order, same column name
     out = tmp_path / "comp.parquet"
     summary = concat_blocks([("emb", x), ("desc", y)], out, scaling="block")
     df = pl.read_parquet(out)
@@ -109,7 +118,9 @@ def test_concat_refuses_missing_values(tmp_path):
 
 
 def test_concat_drops_ruddy_row_index(tmp_path):
-    scores = _write(tmp_path / "pca_scores.csv", ["a", "b", "c"], source_row_index=[0, 1, 2], PC1=[1.0, 2.0, 0.0])
+    scores = _write(
+        tmp_path / "pca_scores.csv", ["a", "b", "c"], source_row_index=[0, 1, 2], PC1=[1.0, 2.0, 0.0]
+    )
     y = _write(tmp_path / "y.csv", ["a", "b", "c"], g=[1.0, 3.0, 2.0])
     concat_blocks([("pca", scores), ("y", y)], tmp_path / "o.parquet")
     assert pl.read_parquet(tmp_path / "o.parquet").columns == ["id", "pca__PC1", "y__g"]
