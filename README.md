@@ -2,9 +2,6 @@
 
 Nextflow pipeline that connects [Sylphy](https://github.com/kren-ai-lab/sylphy), [Roxy](https://github.com/kren-ai-lab/roxy), [Eris](https://github.com/kren-ai-lab/eris) and [Ruddy](https://github.com/kren-ai-lab/ruddy): it generates protein representations, characterizes them, compares representation spaces and composes them into joint feature matrices.
 
-Status: prototype (W5 and a minimal W6 of the KaleidoProt specification).
-See [docs/design.md](docs/design.md) for scope, decisions and open points.
-
 ## How it works
 
 ![kaleidoprot-nf pipeline: params.yaml, VALIDATE, REPRESENT, CHARACTERIZE, COMPOSE, report](docs/pipeline.svg)
@@ -15,7 +12,7 @@ See [docs/design.md](docs/design.md) for scope, decisions and open points.
 - **COMPOSE** builds each composition from blocks that are used raw, reduced with a Ruddy PCA (`reduce: N`) or filtered from their Ruddy EDA (`select: true`).  `kpnf concat` aligns blocks by id, prefixes columns with the block name and scales them; the result goes through a final Ruddy PCA and a figure.
 - **Report**: `report/report.md` and `report/summary.json` summarize everything above.
 
-Rules kept from the specification: rows are aligned by `id`, never by position; nothing is zero-filled or imputed (a block with missing values stops the composition); column names carry the block prefix (`esm2_t6__p_0`); projections come only from Ruddy; every output has a `provenance/1` sidecar.
+Across the pipeline, rows are aligned by `id`, never by position; nothing is zero-filled or imputed (a block with missing values stops the composition); column names carry the block prefix (`esm2_t6__p_0`); projections come only from Ruddy; every output has a `provenance/1` sidecar.
 
 ## Containers (docker and apptainer profiles)
 
