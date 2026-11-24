@@ -8,6 +8,7 @@
 - `kpnf` package: `stage-manifest`, `select`, `concat`, `plot`, `report`, with `provenance/1` sidecars.
 - Test profile on 16 public PDB entries (`examples/test`).
 - CI lints the pipeline and runs the test profile with stub tasks (`-stub`).
+- Representation pairs are compared on their standardized PCA scores (`comparison_components`, default 5) instead of the raw matrices, so Procrustes runs and large-magnitude columns no longer dominate CKA and Mantel.
 - A representation's `config` can hold the tool's options inline in `params.yaml`, or the path to its `--config` file. The test example uses inline configs.
 - `docker` and `apptainer` profiles: each process runs the released image of its tool from `ghcr.io/kren-ai-lab`. `stage-manifest` runs in its own task (`KPNF_STAGE_MANIFEST`), so Eris needs only its own image.
 - kpnf image on `ghcr.io/kren-ai-lab/kpnf`: `<version>` and `latest` on release tags, `main` on pushes to main.

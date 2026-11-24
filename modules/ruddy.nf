@@ -73,9 +73,12 @@ process RUDDY_COMPARE {
     path "cmp_${x_name}__${y_name}.provenance.json", emit: provenance
 
     script:
+    // PCA scores also carry source_row_index, so the features are named explicitly.
+    def features = (1..params.comparison_components).collect { i -> "--x-feature-column PC${i} --y-feature-column PC${i}" }.join(' ')
     """
     ruddy -q analyze representation ${x_matrix} ${y_matrix} \\
         --x-id-column id --y-id-column id \\
+        ${features} \\
         --representation-alignment ${params.alignment} \\
         --mantel-permutations ${params.mantel_permutations} \\
         --random-state ${params.seed} \\

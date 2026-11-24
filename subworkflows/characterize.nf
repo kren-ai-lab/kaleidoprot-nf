@@ -1,5 +1,5 @@
 // Characterize each representation on its own (EDA + PCA + figure) and compare pairs of
-// representation spaces (CCA, CKA, Procrustes, Mantel, distance similarity).
+// representation spaces (CCA, CKA, Procrustes, Mantel, distance similarity) on their PCA scores.
 
 include { RUDDY_EDA     } from '../modules/ruddy'
 include { RUDDY_PCA     } from '../modules/ruddy'
@@ -21,7 +21,7 @@ workflow CHARACTERIZE {
                 [
                     id: meta.name,
                     title: "${meta.name} (${meta.tool})",
-                    n_components: params.projection_components,
+                    n_components: params.comparison_components,
                     scaling: params.projection_scaling
                 ],
                 matrix
@@ -30,7 +30,9 @@ workflow CHARACTERIZE {
     )
     KPNF_PLOT(RUDDY_PCA.out.pca, labels)
 
-    def by_name = matrices.map { meta, matrix -> [meta.name, matrix] }
+    // Raw matrices make CCA degenerate (features >= samples), let large-magnitude columns dominate CKA and
+    // Mantel, and rule out Procrustes (different widths); standardized PCA scores of equal width avoid all three.
+    def by_name = RUDDY_PCA.out.pca.map { meta, pca_dir -> [meta.id, pca_dir.resolve('pca_scores.csv')] }
     def pairs = channel.fromList(comparisons)
         .map { pair -> [pair[0], pair[1]] }
         .combine(by_name, by: 0) // [x, y, x_matrix]

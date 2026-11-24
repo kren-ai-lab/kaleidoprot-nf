@@ -83,6 +83,9 @@ def checkParams(p) {
             errors << "${where}: scaling must be none, standard or block"
         }
     }
+    if (!(p.comparison_components instanceof Integer && p.comparison_components >= 2)) {
+        errors << 'comparison_components must be an integer >= 2 (the figures plot PC1 and PC2)'
+    }
     if (!(p.alignment in ['strict', 'partial'])) {
         errors << 'alignment must be strict or partial'
     }
