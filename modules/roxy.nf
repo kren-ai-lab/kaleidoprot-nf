@@ -3,6 +3,7 @@
 process ROXY_VALIDATE {
     tag "${meta.name}"
     label 'process_single'
+    container 'ghcr.io/kren-ai-lab/roxy:0.4.0'
 
     input:
     tuple val(meta), path(config)
@@ -19,6 +20,7 @@ process ROXY_VALIDATE {
 process ROXY_COMPUTE {
     tag "${meta.name}"
     label 'process_medium'
+    container 'ghcr.io/kren-ai-lab/roxy:0.4.0'
     publishDir "${params.outdir}/representations", mode: params.publish_dir_mode
 
     input:

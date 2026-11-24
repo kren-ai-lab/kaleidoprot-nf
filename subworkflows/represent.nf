@@ -4,6 +4,7 @@
 include { SYLPHY_VALIDATE ; SYLPHY_ENCODE ; SYLPHY_EMBED } from '../modules/sylphy'
 include { ROXY_VALIDATE ; ROXY_COMPUTE                   } from '../modules/roxy'
 include { ERIS_VALIDATE ; ERIS_FEATURES                  } from '../modules/eris'
+include { KPNF_STAGE_MANIFEST                           } from '../modules/kpnf'
 
 workflow REPRESENT {
     take:
@@ -40,7 +41,8 @@ workflow REPRESENT {
     SYLPHY_ENCODE(ready.encode, sequences)
     SYLPHY_EMBED(ready.embed, sequences)
     ROXY_COMPUTE(ready.roxy, sequences)
-    ERIS_FEATURES(ready.eris, manifest, structures)
+    KPNF_STAGE_MANIFEST(manifest.filter { m -> m })
+    ERIS_FEATURES(ready.eris, KPNF_STAGE_MANIFEST.out, structures)
 
     def all_matrices = SYLPHY_ENCODE.out.matrix
         .mix(SYLPHY_EMBED.out.matrix, ROXY_COMPUTE.out.matrix, ERIS_FEATURES.out.matrix)

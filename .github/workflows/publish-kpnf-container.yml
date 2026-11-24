@@ -1,11 +1,14 @@
 name: publish-kpnf-container
 
-# Builds ghcr.io/kren-ai-lab/kpnf from python/ on a pipeline release tag (v*), tagged <version> and latest,
-# so each pipeline release pins the kpnf image it was released with.
+# Builds ghcr.io/kren-ai-lab/kpnf from python/:
+# - on a pipeline release tag (v*): <version> and latest, so each release pins the kpnf image it shipped with;
+# - on a push to main that touches python/: main, the image dev versions of the pipeline run with.
 
 on:
   push:
     tags: ["v*"]
+    branches: [main]
+    paths: ["python/**", ".github/workflows/publish-kpnf-container.yml"]
 
 permissions:
   contents: read
@@ -19,8 +22,16 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Resolve version
-        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+      - name: Resolve tags
+        run: |
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            v="${GITHUB_REF_NAME#v}"
+            echo "VERSION=$v" >> "$GITHUB_ENV"
+            echo "TAGS=$IMAGE:$v,$IMAGE:latest" >> "$GITHUB_ENV"
+          else
+            echo "VERSION=main" >> "$GITHUB_ENV"
+            echo "TAGS=$IMAGE:main" >> "$GITHUB_ENV"
+          fi
 
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
@@ -32,10 +43,11 @@ jobs:
           labels: org.opencontainers.image.version=${{ env.VERSION }}
           load: true
 
-      # kpnf's version must match the tag: bump python/pyproject.toml with the pipeline release.
+      # On a release, kpnf's version must match the tag: bump python/pyproject.toml with the pipeline.
       - name: Smoke test
         run: |
-          docker run --rm kpnf:test kpnf --version | grep -Fx "kpnf $VERSION"
+          docker run --rm kpnf:test kpnf --version
+          if [ "$GITHUB_REF_TYPE" = tag ]; then docker run --rm kpnf:test kpnf --version | grep -Fx "kpnf $VERSION"; fi
           docker run --rm kpnf:test pip check
 
       - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
@@ -48,6 +60,6 @@ jobs:
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: python
-          tags: ${{ env.IMAGE }}:${{ env.VERSION }},${{ env.IMAGE }}:latest
+          tags: ${{ env.TAGS }}
           labels: org.opencontainers.image.version=${{ env.VERSION }}
           push: true

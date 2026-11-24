@@ -36,6 +36,14 @@ zero-filled or imputed (a block with missing values stops the composition); colu
 block prefix (`esm2_t6__p_0`); projections come only from Ruddy; every output has a
 `provenance/1` sidecar.
 
+## Containers (docker and apptainer profiles)
+
+With `-profile docker` or `-profile apptainer`, each process runs the released image of its tool from `ghcr.io/kren-ai-lab` (versions pinned in `modules/`), so only the engine is needed. `SYLPHY_EMBED` uses the `-full` Sylphy image (about 6 GB); the other images are 0.6 to 1 GB. kpnf runs the image of the pipeline release, or `kpnf:main` on a dev version.
+
+```bash
+nextflow run . -profile docker,test -params-file examples/test/params.yaml
+```
+
 ## Install (local profile)
 
 All tools must be on `PATH`. One Python 3.13 environment holds the four libraries plus the `kpnf`

@@ -4,6 +4,7 @@
 process RUDDY_EDA {
     tag "${meta.name}"
     label 'process_medium'
+    container 'ghcr.io/kren-ai-lab/ruddy:0.2.1'
     publishDir "${params.outdir}/eda", mode: params.publish_dir_mode
 
     input:
@@ -25,6 +26,7 @@ process RUDDY_EDA {
 process RUDDY_PCA {
     tag "${meta.id}"
     label 'process_medium'
+    container 'ghcr.io/kren-ai-lab/ruddy:0.2.1'
     publishDir "${params.outdir}/projections", mode: params.publish_dir_mode
 
     input:
@@ -48,6 +50,7 @@ process RUDDY_PCA {
 process RUDDY_COMPARE {
     tag "${x_name} vs ${y_name}"
     label 'process_medium'
+    container 'ghcr.io/kren-ai-lab/ruddy:0.2.1'
     publishDir "${params.outdir}/comparisons", mode: params.publish_dir_mode
 
     input:

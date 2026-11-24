@@ -1,9 +1,33 @@
 // kpnf: glue that belongs to KaleidoProt rather than to any single library
 // (feature selection, block concatenation, scaling, plots, report).
 
+// Image tag: the pipeline version, or `main` (built from the main branch) on a dev version.
+def kpnfTag() {
+    def v = workflow.manifest.version
+    v.contains('dev') ? 'main' : v
+}
+
+process KPNF_STAGE_MANIFEST {
+    label 'process_single'
+    container "ghcr.io/kren-ai-lab/kpnf:${kpnfTag()}"
+
+    input:
+    path manifest
+
+    output:
+    path 'manifest.local.csv'
+
+    script:
+    // Manifest paths are rewritten to the staged files; Eris resolves them against the CWD.
+    """
+    kpnf stage-manifest ${manifest} --prefix structures/ --out manifest.local.csv > /dev/null
+    """
+}
+
 process KPNF_SELECT {
     tag "${block.comp}:${block.rep}"
     label 'process_single'
+    container "ghcr.io/kren-ai-lab/kpnf:${kpnfTag()}"
     publishDir "${params.outdir}/selection", mode: params.publish_dir_mode
 
     input:
@@ -32,6 +56,7 @@ process KPNF_SELECT {
 process KPNF_CONCAT {
     tag "${comp.name}"
     label 'process_single'
+    container "ghcr.io/kren-ai-lab/kpnf:${kpnfTag()}"
     publishDir "${params.outdir}/compositions", mode: params.publish_dir_mode
 
     input:
@@ -55,6 +80,7 @@ process KPNF_CONCAT {
 process KPNF_PLOT {
     tag "${meta.id}"
     label 'process_single'
+    container "ghcr.io/kren-ai-lab/kpnf:${kpnfTag()}"
     publishDir "${params.outdir}/figures", mode: params.publish_dir_mode
 
     input:
@@ -74,6 +100,7 @@ process KPNF_PLOT {
 
 process KPNF_REPORT {
     label 'process_single'
+    container "ghcr.io/kren-ai-lab/kpnf:${kpnfTag()}"
     publishDir "${params.outdir}", mode: params.publish_dir_mode
 
     input:
