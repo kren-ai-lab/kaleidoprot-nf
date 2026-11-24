@@ -10,13 +10,7 @@ Status: prototype (W5 and a minimal W6 of the KaleidoProt specification). See
 
 ## How it works
 
-```
-params.yaml ─► VALIDATE ─► REPRESENT ─► CHARACTERIZE ─► COMPOSE ─► report
-                           sylphy        ruddy EDA      select / reduce
-                           roxy          ruddy PCA      kpnf concat
-                           eris          figures        ruddy PCA + figure
-                                         ruddy compare
-```
+![kaleidoprot-nf pipeline: params.yaml, VALIDATE, REPRESENT, CHARACTERIZE, COMPOSE, report](docs/pipeline.svg)
 
 - **VALIDATE** checks every representation's `--config` with `<tool> validate-config`. No representation starts until every config passed, so a typo fails in seconds instead of after the embeddings.
 - **REPRESENT** fans out over `representations`. Each entry names a tool and that tool's own `--config` file.
