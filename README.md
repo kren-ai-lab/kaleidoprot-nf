@@ -86,9 +86,10 @@ results/
 ## Layout
 
 ```
-main.nf                    entry workflow + parameter checks
+main.nf                    entry workflow
+utils.nf                   parameter checks and comparison pairs
 modules/<tool>.nf          one file per tool (sylphy, roxy, eris, ruddy, kpnf)
-subworkflows/              represent, characterize, compose
+subworkflows/              validate, represent, characterize, compose
 python/                    kpnf package (select, concat, plot, report, stage-manifest)
 conf/                      resources and test profile
 examples/test/             params, per-representation configs, test data fetcher
