@@ -1,7 +1,7 @@
 # kpnf
 
-Small helper package used by the `kaleidoprot-nf` pipeline. It holds the operations that do not
-belong to any of the four libraries (Sylphy, Roxy, Eris, Ruddy):
+Small helper package used by the `kaleidoprot-nf` pipeline.
+It holds the operations that do not belong to any of the four libraries (Sylphy, Roxy, Eris, Ruddy):
 
 | Command | What it does |
 |---|---|
@@ -11,11 +11,10 @@ belong to any of the four libraries (Sylphy, Roxy, Eris, Ruddy):
 | `kpnf plot` | Scatter plot of a Ruddy PCA, coloured by a label column. |
 | `kpnf report` | Aggregates the pipeline outputs into `report.md` and `summary.json`. |
 
-Every file output gets a `<file>.provenance.json` sidecar with the same `provenance/1` layout the
-four libraries write, so lineage can be rebuilt by matching output and input hashes.
+Every file output gets a `<file>.provenance.json` sidecar with the same `provenance/1` layout the four libraries write, so lineage can be rebuilt by matching output and input hashes.
 
-Projections are not computed here: they come from `ruddy project pca`. Supervised feature
-selection is out of scope (see `krenai_pipelines/pipeline_feature_selection`).
+Projections are not computed here: they come from `ruddy project pca`.
+Supervised feature selection is out of scope (see `krenai_pipelines/pipeline_feature_selection`).
 
 ```bash
 uv pip install -e python/

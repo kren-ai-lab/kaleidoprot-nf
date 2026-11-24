@@ -1,28 +1,30 @@
 # kaleidoprot-nf
 
-Nextflow pipeline that connects [Sylphy](https://github.com/kren-ai-lab/sylphy),
-[Roxy](https://github.com/kren-ai-lab/roxy), [Eris](https://github.com/kren-ai-lab/eris) and
-[Ruddy](https://github.com/kren-ai-lab/ruddy): it generates protein representations, characterizes
-them, compares representation spaces and composes them into joint feature matrices.
+Nextflow pipeline that connects [Sylphy](https://github.com/kren-ai-lab/sylphy), [Roxy](https://github.com/kren-ai-lab/roxy), [Eris](https://github.com/kren-ai-lab/eris) and [Ruddy](https://github.com/kren-ai-lab/ruddy): it generates protein representations, characterizes them, compares representation spaces and composes them into joint feature matrices.
 
-Status: prototype (W5 and a minimal W6 of the KaleidoProt specification). See
-[docs/design.md](docs/design.md) for scope, decisions and open points.
+Status: prototype (W5 and a minimal W6 of the KaleidoProt specification).
+See [docs/design.md](docs/design.md) for scope, decisions and open points.
 
 ## How it works
 
 ![kaleidoprot-nf pipeline: params.yaml, VALIDATE, REPRESENT, CHARACTERIZE, COMPOSE, report](docs/pipeline.svg)
 
-- **VALIDATE** checks every representation's `--config` with `<tool> validate-config`. No representation starts until every config passed, so a typo fails in seconds instead of after the embeddings.
-- **REPRESENT** fans out over `representations`. Each entry names a tool and that tool's own `--config` file.
+- **VALIDATE** checks every representation's `--config` with `<tool> validate-config`.
+  No representation starts until every config passed, so a typo fails in seconds instead of after the embeddings.
+- **REPRESENT** fans out over `representations`.
+  Each entry names a tool and its config: the tool's options inline, or the path to its `--config` file.
 - **CHARACTERIZE** runs `ruddy inspect univariate` (EDA) and `ruddy project pca` on every representation, plots the PCA coloured by `label_column`, and runs `ruddy analyze representation` (CCA, CKA, Procrustes, Mantel, distance similarity) on the requested pairs.
-- **COMPOSE** builds each composition from blocks that are used raw, reduced with a Ruddy PCA (`reduce: N`) or filtered from their Ruddy EDA (`select: true`). `kpnf concat` aligns blocks by id, prefixes columns with the block name and scales them; the result goes through a final Ruddy PCA and a figure.
+- **COMPOSE** builds each composition from blocks that are used raw, reduced with a Ruddy PCA (`reduce: N`) or filtered from their Ruddy EDA (`select: true`).
+  `kpnf concat` aligns blocks by id, prefixes columns with the block name and scales them; the result goes through a final Ruddy PCA and a figure.
 - **Report**: `report/report.md` and `report/summary.json` summarize everything above.
 
 Rules kept from the specification: rows are aligned by `id`, never by position; nothing is zero-filled or imputed (a block with missing values stops the composition); column names carry the block prefix (`esm2_t6__p_0`); projections come only from Ruddy; every output has a `provenance/1` sidecar.
 
 ## Containers (docker and apptainer profiles)
 
-With `-profile docker` or `-profile apptainer`, each process runs the released image of its tool from `ghcr.io/kren-ai-lab` (versions pinned in `modules/`), so only the engine is needed. `SYLPHY_EMBED` uses the `-full` Sylphy image (about 6 GB); the other images are 0.6 to 1 GB. kpnf runs the image of the pipeline release, or `kpnf:main` on a dev version.
+With `-profile docker` or `-profile apptainer`, each process runs the released image of its tool from `ghcr.io/kren-ai-lab` (versions pinned in `modules/`), so only the engine is needed.
+`SYLPHY_EMBED` uses the `-full` Sylphy image (about 6 GB); the other images are 0.6 to 1 GB.
+kpnf runs the image of the pipeline release, or `kpnf:main` on a dev version.
 
 ```bash
 nextflow run . -profile docker,test -params-file examples/test/params.yaml
@@ -30,7 +32,8 @@ nextflow run . -profile docker,test -params-file examples/test/params.yaml
 
 ## Install (local profile)
 
-All tools must be on `PATH`. One Python 3.13 environment holds the four libraries plus the `kpnf` glue package (Python 3.14 needs a C compiler because `biotraj` has no cp314 wheel).
+All tools must be on `PATH`.
+One Python 3.13 environment holds the four libraries plus the `kpnf` glue package (Python 3.14 needs a C compiler because `biotraj` has no cp314 wheel).
 
 ```bash
 uv venv -p 3.13 .venv && source .venv/bin/activate
