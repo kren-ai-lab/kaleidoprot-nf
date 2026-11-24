@@ -72,7 +72,7 @@ def concat_blocks(
             bad = int((~np.isfinite(x)).any(axis=0).sum())
             raise KpnfError(
                 f"block {name!r}: {bad} column(s) contain missing or non-finite values; "
-                "KaleidoProt does not impute or zero-fill. Filter them with selection (max_missing: 0)."
+                "The pipeline does not impute or zero-fill. Filter them with selection (max_missing: 0)."
             )
         loaded.append((name, ids, features, x))
 

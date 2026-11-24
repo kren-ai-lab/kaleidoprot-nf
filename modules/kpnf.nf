@@ -1,4 +1,4 @@
-// kpnf: glue that belongs to KaleidoProt rather than to any single library
+// kpnf: glue that belongs to the pipeline rather than to any single library
 // (feature selection, block concatenation, scaling, plots, report).
 
 // Image tag: the pipeline version, or `main` (built from the main branch) on a dev version.

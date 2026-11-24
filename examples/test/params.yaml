@@ -1,4 +1,4 @@
-# W5 + minimal W6 prototype. Run from the repository root:
+# Run from the repository root:
 #   nextflow run . -profile local,test -params-file examples/test/params.yaml
 #
 # representations: one entry per generated representation (fan-out).

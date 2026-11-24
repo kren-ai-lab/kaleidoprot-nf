@@ -1,8 +1,7 @@
 """Unsupervised feature filtering of one representation block, driven by its Ruddy EDA.
 
-Ruddy deliberately never drops features, so the decision lives here. The criteria follow the
-unsupervised defaults of ``krenai_pipelines/pipeline_feature_selection`` (missingness, constant and
-near-constant columns, direct greedy redundancy on |rho|) so both pipelines report comparable panels.
+Ruddy deliberately never drops features, so the decision lives here. The criteria are missingness,
+constant and near-constant columns, and direct greedy redundancy on |rho|.
 """
 
 from __future__ import annotations

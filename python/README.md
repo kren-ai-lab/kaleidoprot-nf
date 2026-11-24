@@ -14,7 +14,7 @@ It holds the operations that do not belong to any of the four libraries (Sylphy,
 Every file output gets a `<file>.provenance.json` sidecar with the same `provenance/1` layout the four libraries write, so lineage can be rebuilt by matching output and input hashes.
 
 Projections are not computed here: they come from `ruddy project pca`.
-Supervised feature selection is out of scope (see `krenai_pipelines/pipeline_feature_selection`).
+Supervised feature selection is out of scope.
 
 ```bash
 uv pip install -e python/
