@@ -2,12 +2,14 @@
 /*
  * kaleidoprot-nf: integrates Sylphy, Roxy, Eris and Ruddy.
  *
- *   REPRESENT     validate every --config, then generate each representation (fan-out)
+ *   VALIDATE      check every representation's --config with its tool's validate-config
+ *   REPRESENT     generate each representation (fan-out), once every config passed
  *   CHARACTERIZE  Ruddy EDA + PCA + figure per representation, pairwise space comparisons
  *   COMPOSE       one-level compositions: raw / PCA-reduced / selected blocks -> concat -> PCA -> figure
  *   KPNF_REPORT   report.md + summary.json
  */
 
+include { VALIDATE     } from './subworkflows/validate'
 include { REPRESENT    } from './subworkflows/represent'
 include { CHARACTERIZE } from './subworkflows/characterize'
 include { COMPOSE      } from './subworkflows/compose'
@@ -41,7 +43,8 @@ workflow {
         structures = channel.value(files)
     }
 
-    REPRESENT(reps, sequences, manifest, structures)
+    VALIDATE(reps)
+    REPRESENT(VALIDATE.out.reps, sequences, manifest, structures)
     CHARACTERIZE(REPRESENT.out.matrices, labels, comparisonPairs(params))
     COMPOSE(REPRESENT.out.matrices, CHARACTERIZE.out.eda, params.compositions ?: [], labels)
 

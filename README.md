@@ -11,16 +11,15 @@ Status: prototype (W5 and a minimal W6 of the KaleidoProt specification). See
 ## How it works
 
 ```
-params.yaml ─► validate-config (every representation) ─► REPRESENT ─► CHARACTERIZE ─► COMPOSE ─► report
-                                                         sylphy        ruddy EDA      select / reduce
-                                                         roxy          ruddy PCA      kpnf concat
-                                                         eris          figures        ruddy PCA + figure
-                                                                       ruddy compare
+params.yaml ─► VALIDATE ─► REPRESENT ─► CHARACTERIZE ─► COMPOSE ─► report
+                           sylphy        ruddy EDA      select / reduce
+                           roxy          ruddy PCA      kpnf concat
+                           eris          figures        ruddy PCA + figure
+                                         ruddy compare
 ```
 
-- **REPRESENT** fans out over `representations`. Each entry names a tool and that tool's own
-  `--config` file. All configs are checked with `<tool> validate-config` before any representation
-  starts, so a typo fails in seconds instead of after the embeddings.
+- **VALIDATE** checks every representation's `--config` with `<tool> validate-config`. No representation starts until every config passed, so a typo fails in seconds instead of after the embeddings.
+- **REPRESENT** fans out over `representations`. Each entry names a tool and that tool's own `--config` file.
 - **CHARACTERIZE** runs `ruddy inspect univariate` (EDA) and `ruddy project pca` on every
   representation, plots the PCA coloured by `label_column`, and runs
   `ruddy analyze representation` (CCA, CKA, Procrustes, Mantel, distance similarity) on the

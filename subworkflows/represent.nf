@@ -1,42 +1,24 @@
-// Generate every representation listed in params.representations.
-// All configs are validated first; no representation starts until every validate-config passed.
+// Generate every representation listed in params.representations; VALIDATE has already checked the configs.
 
-include { SYLPHY_VALIDATE ; SYLPHY_ENCODE ; SYLPHY_EMBED } from '../modules/sylphy'
-include { ROXY_VALIDATE ; ROXY_COMPUTE                   } from '../modules/roxy'
-include { ERIS_VALIDATE ; ERIS_FEATURES                  } from '../modules/eris'
-include { KPNF_STAGE_MANIFEST                           } from '../modules/kpnf'
+include { SYLPHY_ENCODE ; SYLPHY_EMBED } from '../modules/sylphy'
+include { ROXY_COMPUTE                 } from '../modules/roxy'
+include { ERIS_FEATURES                } from '../modules/eris'
+include { KPNF_STAGE_MANIFEST          } from '../modules/kpnf'
 
 workflow REPRESENT {
     take:
-    reps        // channel: [ meta(name, tool, features_source), config ]
+    reps        // channel: [ meta(name, tool, features_source), config ], from VALIDATE
     sequences   // value channel: input table (id, sequence, ...)
     manifest    // value channel: Eris manifest, or [] when no structures
     structures  // value channel: list of structure files, or []
 
     main:
-    def by_tool = reps.branch { meta, _config ->
-        sylphy: meta.tool in ['sylphy-encode', 'sylphy-embed']
+    def ready = reps.branch { meta, _config ->
+        encode: meta.tool == 'sylphy-encode'
+        embed: meta.tool == 'sylphy-embed'
         roxy: meta.tool == 'roxy'
         eris: meta.tool == 'eris'
     }
-    SYLPHY_VALIDATE(by_tool.sylphy)
-    ROXY_VALIDATE(by_tool.roxy)
-    ERIS_VALIDATE(by_tool.eris)
-
-    def gate = SYLPHY_VALIDATE.out.ok
-        .mix(ROXY_VALIDATE.out.ok, ERIS_VALIDATE.out.ok)
-        .collect()
-        .map { _names -> 'validated' }
-
-    def ready = reps
-        .combine(gate)
-        .map { meta, config, _gate -> [meta, config] }
-        .branch { meta, _config ->
-            encode: meta.tool == 'sylphy-encode'
-            embed: meta.tool == 'sylphy-embed'
-            roxy: meta.tool == 'roxy'
-            eris: meta.tool == 'eris'
-        }
 
     SYLPHY_ENCODE(ready.encode, sequences)
     SYLPHY_EMBED(ready.embed, sequences)
