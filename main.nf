@@ -23,7 +23,14 @@ workflow {
 
     def reps = channel.fromList(params.representations)
         .map { r ->
-            [[name: r.name, tool: r.tool, features_source: r.features_source ?: 'auto'], file(r.config, checkIfExists: true)]
+            [
+                [
+                    name: r.name,
+                    tool: r.tool,
+                    features_source: r.features_source ?: 'auto'
+                ],
+                file(r.config, checkIfExists: true)
+            ]
         }
     def sequences = channel.value(file(params.input, checkIfExists: true))
     def labels = channel.value(params.label_column ? file(params.input) : [])
