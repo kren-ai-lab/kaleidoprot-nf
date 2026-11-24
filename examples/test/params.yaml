@@ -3,21 +3,32 @@
 #
 # representations: one entry per generated representation (fan-out).
 #   tool: sylphy-encode | sylphy-embed | roxy | eris
-#   config: the tool's own --config file, checked with `<tool> validate-config` before anything runs
+#   config: the tool's options inline (what its --config file would hold), or the path to that file;
+#           checked with `<tool> validate-config` before anything runs
 #   features_source (eris only): graph_attr | pooled_attr | global_embedding | auto
 representations:
   - name: esm2_t6
     tool: sylphy-embed
-    config: examples/test/configs/esm2_t6.yaml
+    # ESM2 8M, mean pooling per sequence. Use device: cuda and a larger model on a GPU host.
+    config:
+      model: facebook/esm2_t6_8M_UR50D
+      pool: mean
+      layers: last
+      device: cpu
+      batch_size: 8
   - name: aa_frequency
     tool: sylphy-encode
-    config: examples/test/configs/aa_frequency.yaml
+    config:
+      method: frequency # amino acid frequencies (20 columns)
   - name: roxy_composition
     tool: roxy
-    config: examples/test/configs/roxy_composition.yaml
+    config:
+      families: [composition] # every descriptor of the composition family (~1,700 columns)
   - name: eris_contact
     tool: eris
-    config: examples/test/configs/eris_contact.yaml
+    # residue contact graph; structure-level features come from `eris features`
+    config:
+      representation: residue_contact_graph
     features_source: graph_attr
 
 # Pairwise comparison of representation spaces with `ruddy analyze representation`.

@@ -60,7 +60,7 @@ Add `-profile gpu` (GPU tasks get `accelerator = 1`) or `slurm` as needed; set `
 | `input`           | CSV/TSV/Parquet with an `id` column and a sequence column (`seq_column`, default `sequence`). Extra columns are allowed, e.g. labels.                                                                                                                   |
 | `structures`      | Eris manifest `id,path[,chain,model]`. Relative paths resolve against the manifest. Required only for `tool: eris`. Ids must match `input` (or use `alignment: partial`).                                                                               |
 | `label_column`    | Column of `input` used to colour the figures.                                                                                                                                                                                                           |
-| `representations` | List of `{name, tool, config[, features_source]}`; `tool` is `sylphy-encode`, `sylphy-embed`, `roxy` or `eris`.                                                                                                                                         |
+| `representations` | List of `{name, tool, config[, features_source]}`; `tool` is `sylphy-encode`, `sylphy-embed`, `roxy` or `eris`. `config` holds the tool's options inline, or the path to its `--config` file.                                                           |
 | `comparisons`     | `all` or a list of `[x, y]` pairs.                                                                                                                                                                                                                      |
 | `compositions`    | List of `{name, blocks, scaling, n_components}`; each block is `{representation, reduce: N}` or `{representation, select: true}` or just `{representation}`. `scaling`: `none`, `standard`, `block` (standardize, then equal total variance per block). |
 | `alignment`       | `strict` (default; same ids everywhere or fail) or `partial` (intersection, dropped ids are reported).                                                                                                                                                  |
@@ -92,5 +92,5 @@ modules/<tool>.nf          one file per tool (sylphy, roxy, eris, ruddy, kpnf)
 subworkflows/              validate, represent, characterize, compose
 python/                    kpnf package (select, concat, plot, report, stage-manifest)
 conf/                      resources and test profile
-examples/test/             params, per-representation configs, test data fetcher
+examples/test/             params (with inline tool configs), test data fetcher
 ```

@@ -1,4 +1,4 @@
-// Parameter helpers for main.nf: checks that fail before any task runs, and the comparison pairs.
+// Parameter helpers for main.nf: checks that fail before any task runs, comparison pairs and inline configs.
 
 // Pairs of representation names to compare: 'all', or a list of [x, y].
 def comparisonPairs(p) {
@@ -40,8 +40,8 @@ def checkParams(p) {
         if (!(r.tool in TOOLS)) {
             errors << "${where}: tool '${r.tool}' is not one of ${TOOLS.join(', ')}"
         }
-        if (!r.config) {
-            errors << "${where}: config is required (the tool's --config file)"
+        if (!(r.config instanceof Map) && !(r.config instanceof CharSequence && r.config)) {
+            errors << "${where}: config is required: the tool's options as a map, or the path to its --config file"
         }
         if (r.tool == 'eris' && !p.structures) {
             errors << "${where}: Eris needs --structures (manifest with id,path[,chain,model])"
@@ -87,4 +87,16 @@ def checkParams(p) {
         errors << 'alignment must be strict or partial'
     }
     return errors
+}
+
+// An inline config (a map in params) as a file the tool reads with --config. JSON, which the tools read as YAML.
+// Rewritten only when its content changes: the task cache keys on the file's mtime, so -resume keeps working.
+def inlineConfig(name, config) {
+    def f = file("${workflow.workDir}/configs/${name}.json")
+    def text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(config)) + '\n'
+    if (!f.exists() || f.text != text) {
+        f.parent.mkdirs()
+        f.text = text
+    }
+    return f
 }

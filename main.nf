@@ -15,7 +15,7 @@ include { CHARACTERIZE } from './subworkflows/characterize'
 include { COMPOSE      } from './subworkflows/compose'
 include { KPNF_REPORT  } from './modules/kpnf'
 
-include { checkParams ; comparisonPairs } from './utils'
+include { checkParams ; comparisonPairs ; inlineConfig } from './utils'
 
 workflow {
     def errors = checkParams(params)
@@ -31,7 +31,7 @@ workflow {
                     tool: r.tool,
                     features_source: r.features_source ?: 'auto'
                 ],
-                file(r.config, checkIfExists: true)
+                r.config instanceof Map ? inlineConfig(r.name, r.config) : file(r.config, checkIfExists: true)
             ]
         }
     def sequences = channel.value(file(params.input, checkIfExists: true))
