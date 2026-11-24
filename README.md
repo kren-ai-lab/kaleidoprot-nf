@@ -9,13 +9,10 @@ See [docs/design.md](docs/design.md) for scope, decisions and open points.
 
 ![kaleidoprot-nf pipeline: params.yaml, VALIDATE, REPRESENT, CHARACTERIZE, COMPOSE, report](docs/pipeline.svg)
 
-- **VALIDATE** checks every representation's `--config` with `<tool> validate-config`.
-  No representation starts until every config passed, so a typo fails in seconds instead of after the embeddings.
-- **REPRESENT** fans out over `representations`.
-  Each entry names a tool and its config: the tool's options inline, or the path to its `--config` file.
+- **VALIDATE** checks every representation's `--config` with `<tool> validate-config`. No representation starts until every config passed, so a typo fails in seconds instead of after the embeddings.
+- **REPRESENT** fans out over `representations`. Each entry names a tool and its config: the tool's options inline, or the path to its `--config` file.
 - **CHARACTERIZE** runs `ruddy inspect univariate` (EDA) and `ruddy project pca` on every representation, plots the PCA coloured by `label_column`, and runs `ruddy analyze representation` (CCA, CKA, Procrustes, Mantel, distance similarity) on the requested pairs.
-- **COMPOSE** builds each composition from blocks that are used raw, reduced with a Ruddy PCA (`reduce: N`) or filtered from their Ruddy EDA (`select: true`).
-  `kpnf concat` aligns blocks by id, prefixes columns with the block name and scales them; the result goes through a final Ruddy PCA and a figure.
+- **COMPOSE** builds each composition from blocks that are used raw, reduced with a Ruddy PCA (`reduce: N`) or filtered from their Ruddy EDA (`select: true`).  `kpnf concat` aligns blocks by id, prefixes columns with the block name and scales them; the result goes through a final Ruddy PCA and a figure.
 - **Report**: `report/report.md` and `report/summary.json` summarize everything above.
 
 Rules kept from the specification: rows are aligned by `id`, never by position; nothing is zero-filled or imputed (a block with missing values stops the composition); column names carry the block prefix (`esm2_t6__p_0`); projections come only from Ruddy; every output has a `provenance/1` sidecar.
@@ -29,18 +26,6 @@ kpnf runs the image of the pipeline release, or `kpnf:main` on a dev version.
 ```bash
 nextflow run . -profile docker,test -params-file examples/test/params.yaml
 ```
-
-## Install (local profile)
-
-All tools must be on `PATH`.
-One Python 3.13 environment holds the four libraries plus the `kpnf` glue package (Python 3.14 needs a C compiler because `biotraj` has no cp314 wheel).
-
-```bash
-uv venv -p 3.13 .venv && source .venv/bin/activate
-uv pip install -r envs/requirements.txt
-```
-
-Do not add `--extra-index-url https://download.pytorch.org/whl/cpu` with `--index-strategy unsafe-best-match`: that index carries very old builds of unrelated packages (`six`, `boto3`) and the resolver picks them, which breaks `transformers` at import time.
 
 ## Run
 
