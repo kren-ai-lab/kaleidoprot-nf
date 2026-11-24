@@ -21,7 +21,7 @@ With `-profile docker` or `-profile apptainer`, each process runs the released i
 kpnf runs the image of the pipeline release, or `kpnf:main` on a dev version.
 
 ```bash
-nextflow run . -profile docker,test -params-file examples/test/params.yaml
+nextflow run kren-ai-lab/kaleidoprot-nf -profile docker,test -params-file examples/test/params.yaml
 ```
 
 ## Run
