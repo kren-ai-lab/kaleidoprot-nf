@@ -17,6 +17,11 @@ process ERIS_VALIDATE {
     """
     eris validate-config batch-encode ${config} --json > validation.json || { cat validation.json >&2; exit 2; }
     """
+
+    stub:
+    """
+    true
+    """
 }
 
 process ERIS_FEATURES {
@@ -42,5 +47,13 @@ process ERIS_FEATURES {
     eris batch encode ${manifest} --config ${config} --out ${meta.name}_artifacts
     eris pack ${meta.name}_artifacts --out ${meta.name}_artifacts/index.csv
     eris features ${meta.name}_artifacts/index.csv --out ${meta.name}.csv ${source}
+    """
+
+    stub:
+    """
+    touch ${meta.name}.csv
+    touch ${meta.name}.csv.provenance.json
+    mkdir -p ${meta.name}_artifacts
+    touch ${meta.name}_artifacts.provenance.json
     """
 }

@@ -15,6 +15,11 @@ process ROXY_VALIDATE {
     """
     roxy validate-config ${config} --json > validation.json || { cat validation.json >&2; exit 2; }
     """
+
+    stub:
+    """
+    true
+    """
 }
 
 process ROXY_COMPUTE {
@@ -38,5 +43,11 @@ process ROXY_COMPUTE {
         --id-col id --seq-col ${params.seq_column} \\
         -o ${meta.name}.parquet \\
         --no-progress
+    """
+
+    stub:
+    """
+    touch ${meta.name}.parquet
+    touch ${meta.name}.parquet.provenance.json
     """
 }

@@ -22,6 +22,11 @@ process KPNF_STAGE_MANIFEST {
     """
     kpnf stage-manifest ${manifest} --prefix structures/ --out manifest.local.csv > /dev/null
     """
+
+    stub:
+    """
+    touch manifest.local.csv
+    """
 }
 
 process KPNF_SELECT {
@@ -51,6 +56,13 @@ process KPNF_SELECT {
         --abs-rho ${s.abs_rho} \\
         --method ${s.method} ${cap}
     """
+
+    stub:
+    """
+    touch ${block.comp}__${block.rep}.selected.parquet
+    touch ${block.comp}__${block.rep}.selection.csv
+    touch ${block.comp}__${block.rep}.selected.parquet.provenance.json
+    """
 }
 
 process KPNF_CONCAT {
@@ -75,6 +87,13 @@ process KPNF_CONCAT {
         --scaling ${comp.scaling ?: 'block'} \\
         --alignment ${comp.alignment ?: params.alignment}
     """
+
+    stub:
+    """
+    touch ${comp.name}.parquet
+    touch ${comp.name}.blocks.json
+    touch ${comp.name}.parquet.provenance.json
+    """
 }
 
 process KPNF_PLOT {
@@ -95,6 +114,12 @@ process KPNF_PLOT {
     def colour = labels && params.label_column ? "--labels ${labels} --label-column ${params.label_column}" : ''
     """
     kpnf plot ${pca_dir} --out ${meta.id}.png --title '${meta.title ?: meta.id}' ${colour}
+    """
+
+    stub:
+    """
+    touch ${meta.id}.png
+    touch ${meta.id}.png.provenance.json
     """
 }
 
@@ -117,5 +142,10 @@ process KPNF_REPORT {
     script:
     """
     kpnf report results --out-dir report > /dev/null
+    """
+
+    stub:
+    """
+    mkdir -p report
     """
 }

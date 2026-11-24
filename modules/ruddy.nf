@@ -21,6 +21,12 @@ process RUDDY_EDA {
         --max-pairwise-columns ${params.eda_max_columns} \\
         --output-dir eda_${meta.name}
     """
+
+    stub:
+    """
+    mkdir -p eda_${meta.name}
+    touch eda_${meta.name}.provenance.json
+    """
 }
 
 process RUDDY_PCA {
@@ -45,6 +51,12 @@ process RUDDY_PCA {
         --random-state ${params.seed} \\
         --output-dir pca_${meta.id}
     """
+
+    stub:
+    """
+    mkdir -p pca_${meta.id}
+    touch pca_${meta.id}.provenance.json
+    """
 }
 
 process RUDDY_COMPARE {
@@ -68,5 +80,11 @@ process RUDDY_COMPARE {
         --mantel-permutations ${params.mantel_permutations} \\
         --random-state ${params.seed} \\
         --output-dir cmp_${x_name}__${y_name}
+    """
+
+    stub:
+    """
+    mkdir -p cmp_${x_name}__${y_name}
+    touch cmp_${x_name}__${y_name}.provenance.json
     """
 }

@@ -1,0 +1,54 @@
+name: pipeline
+
+# Lints the pipeline and runs the whole DAG of the test profile with stub tasks (no tools or images needed).
+
+on:
+  push:
+    paths: &paths
+      - "main.nf"
+      - "utils.nf"
+      - "nextflow.config"
+      - "conf/**"
+      - "modules/**"
+      - "subworkflows/**"
+      - "examples/test/params.yaml"
+      - ".github/workflows/pipeline.yml"
+  pull_request:
+    paths: *paths
+
+jobs:
+  lint-and-stub:
+    runs-on: ubuntu-latest
+    env:
+      NXF_VER: 26.10.6
+      NXF_ANSI_LOG: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Install Nextflow
+        run: |
+          curl -fsSL https://get.nextflow.io | bash
+          sudo mv nextflow /usr/local/bin/
+
+      - name: Lint
+        run: nextflow lint .
+
+      # Stub tasks never read their inputs, so empty placeholders stand in for the test data.
+      - name: Placeholder inputs
+        run: |
+          d="$RUNNER_TEMP/data"
+          mkdir -p "$d/structures"
+          printf 'id,sequence,family\na,ACDEFGHIK,x\nb,LMNPQRSTV,y\n' > "$d/sequences.csv"
+          printf 'id,path\na,structures/a.pdb\nb,structures/b.pdb\n' > "$d/manifest.csv"
+          touch "$d/structures/a.pdb" "$d/structures/b.pdb"
+
+      - name: Stub run of the test profile
+        run: |
+          nextflow run . -profile test -stub -params-file examples/test/params.yaml \
+            --input "$RUNNER_TEMP/data/sequences.csv" --structures "$RUNNER_TEMP/data/manifest.csv" \
+            --outdir "$RUNNER_TEMP/results"

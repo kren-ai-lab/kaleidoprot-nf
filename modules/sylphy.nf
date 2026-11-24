@@ -17,6 +17,11 @@ process SYLPHY_VALIDATE {
     """
     sylphy validate-config ${target} ${config} --json > validation.json || { cat validation.json >&2; exit 2; }
     """
+
+    stub:
+    """
+    true
+    """
 }
 
 process SYLPHY_ENCODE {
@@ -41,6 +46,12 @@ process SYLPHY_ENCODE {
         -o ${meta.name}.parquet \\
         --log-level WARNING
     """
+
+    stub:
+    """
+    touch ${meta.name}.parquet
+    touch ${meta.name}.parquet.provenance.json
+    """
 }
 
 process SYLPHY_EMBED {
@@ -64,5 +75,11 @@ process SYLPHY_EMBED {
         -i ${sequences} --id-col id --seq-col ${params.seq_column} \\
         -o ${meta.name}.parquet \\
         --log-level WARNING
+    """
+
+    stub:
+    """
+    touch ${meta.name}.parquet
+    touch ${meta.name}.parquet.provenance.json
     """
 }
