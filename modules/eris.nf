@@ -5,6 +5,7 @@
 process ERIS_VALIDATE {
     tag "${meta.name}"
     label 'process_single'
+    container 'ghcr.io/kren-ai-lab/eris:0.2.0'
 
     input:
     tuple val(meta), path(config)
@@ -21,11 +22,12 @@ process ERIS_VALIDATE {
 process ERIS_FEATURES {
     tag "${meta.name}"
     label 'process_medium'
+    container 'ghcr.io/kren-ai-lab/eris:0.2.0'
     publishDir "${params.outdir}/representations", mode: params.publish_dir_mode
 
     input:
     tuple val(meta), path(config)
-    path manifest
+    path manifest  // staged by KPNF_STAGE_MANIFEST: paths point under structures/
     path structures, stageAs: 'structures/*'
 
     output:
@@ -37,10 +39,7 @@ process ERIS_FEATURES {
     script:
     def source = meta.features_source && meta.features_source != 'auto' ? "--source ${meta.features_source}" : ''
     """
-    # Manifest paths are rewritten to the staged files; Eris resolves them against the CWD.
-    kpnf stage-manifest ${manifest} --prefix structures/ --out manifest.local.csv > /dev/null
-
-    eris batch encode manifest.local.csv --config ${config} --out ${meta.name}_artifacts
+    eris batch encode ${manifest} --config ${config} --out ${meta.name}_artifacts
     eris pack ${meta.name}_artifacts --out ${meta.name}_artifacts/index.csv
     eris features ${meta.name}_artifacts/index.csv --out ${meta.name}.csv ${source}
     """
