@@ -29,10 +29,10 @@ nextflow run kren-ai-lab/kaleidoprot-nf -profile docker,test -params-file exampl
 ```bash
 # small public test set: 16 PDB entries, 4 families
 python examples/test/fetch_test_data.py examples/test/data
-nextflow run . -profile local,test -params-file examples/test/params.yaml
+nextflow run . -profile docker,test -params-file examples/test/params.yaml
 
 # own data
-nextflow run . -profile local -params-file my_params.yaml \
+nextflow run . -profile docker -params-file my_params.yaml \
     --input sequences.csv --structures manifest.csv --label_column family --outdir results
 ```
 
