@@ -7,11 +7,11 @@ from pathlib import Path
 import matplotlib
 
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
-import polars as pl  # noqa: E402
+import matplotlib.pyplot as plt
+import polars as pl
 
-from kpnf.io import KpnfError, read_table  # noqa: E402
-from kpnf.provenance import Recorder  # noqa: E402
+from kpnf.io import KpnfError, read_table
+from kpnf.provenance import Recorder
 
 MAX_LEGEND_LEVELS = 20
 

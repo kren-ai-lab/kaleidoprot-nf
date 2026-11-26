@@ -104,7 +104,7 @@ def select_block(
     settings.validate()
     recorder = Recorder("select", {"id_column": id_column, **asdict(settings)})
     df = read_table(matrix_path)
-    ids, features, x = split_matrix(df, id_column, source=str(matrix_path))
+    _, features, x = split_matrix(df, id_column, source=str(matrix_path))
     eda = _load_eda(Path(eda_dir))
     known = set(eda.get_column("column").to_list())
     missing_in_eda = [f for f in features if f not in known]
