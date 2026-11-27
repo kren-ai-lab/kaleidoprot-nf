@@ -35,12 +35,13 @@ process SYLPHY_ENCODE {
     path sequences
 
     output:
-    tuple val(meta), path("${meta.name}.parquet"), emit: matrix
-    path "${meta.name}.parquet.provenance.json", emit: provenance
+    tuple val(meta), path("${meta.name}.parquet"), optional: true, emit: matrix
+    path "${meta.name}.parquet.provenance.json", optional: true, emit: provenance
+    path "rep_${meta.name}.failed", optional: true, emit: failed
 
     script:
     """
-    sylphy encode \\
+    soft-fail rep_${meta.name} sylphy encode \\
         --config ${config} \\
         -i ${sequences} --id-col id --seq-col ${params.seq_column} \\
         -o ${meta.name}.parquet \\
@@ -65,12 +66,13 @@ process SYLPHY_EMBED {
     path sequences
 
     output:
-    tuple val(meta), path("${meta.name}.parquet"), emit: matrix
-    path "${meta.name}.parquet.provenance.json", emit: provenance
+    tuple val(meta), path("${meta.name}.parquet"), optional: true, emit: matrix
+    path "${meta.name}.parquet.provenance.json", optional: true, emit: provenance
+    path "rep_${meta.name}.failed", optional: true, emit: failed
 
     script:
     """
-    sylphy embed \\
+    soft-fail rep_${meta.name} sylphy embed \\
         --config ${config} \\
         -i ${sequences} --id-col id --seq-col ${params.seq_column} \\
         -o ${meta.name}.parquet \\

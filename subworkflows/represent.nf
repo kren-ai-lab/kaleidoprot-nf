@@ -24,7 +24,7 @@ workflow REPRESENT {
     SYLPHY_ENCODE(ready.encode, sequences)
     SYLPHY_EMBED(ready.embed, sequences)
     ROXY_COMPUTE(ready.roxy, sequences)
-    KPNF_STAGE_MANIFEST(manifest.filter { m -> m })
+    KPNF_STAGE_MANIFEST(manifest.filter { m -> m }, sequences)
     ERIS_FEATURES(ready.eris, KPNF_STAGE_MANIFEST.out, structures)
 
     def all_matrices = SYLPHY_ENCODE.out.matrix.mix(SYLPHY_EMBED.out.matrix, ROXY_COMPUTE.out.matrix, ERIS_FEATURES.out.matrix)
@@ -33,4 +33,5 @@ workflow REPRESENT {
     emit:
     matrices   = all_matrices   // channel: [ meta, matrix ]
     provenance = all_provenance // channel: sidecar of each matrix
+    failed     = SYLPHY_ENCODE.out.failed.mix(SYLPHY_EMBED.out.failed, ROXY_COMPUTE.out.failed, ERIS_FEATURES.out.failed)
 }

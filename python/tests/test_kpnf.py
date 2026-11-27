@@ -10,6 +10,7 @@ import pytest
 from kpnf.cli import EXIT_DATA, EXIT_OK, main
 from kpnf.concat import concat_blocks
 from kpnf.io import KpnfError
+from kpnf.report import build_report
 from kpnf.select import SelectionSettings, select_block
 
 
@@ -134,5 +135,25 @@ def test_cli_exit_codes_and_stage_manifest(tmp_path, capsys):
     assert local["path"].to_list() == ["s/1abc.pdb", "s/2xyz.pdb"] and local["chain"].to_list() == ["A", "B"]
     m.write_text("id,path\nx,/a/1abc.pdb\ny,/b/1abc.pdb\n")
     assert main(["stage-manifest", str(m), "--out", str(tmp_path / "l2.csv")]) == EXIT_DATA
+    m.write_text("id,path\nx,/a/1abc.pdb\n")
+    (tmp_path / "seqs.csv").write_text("id,sequence\nx,AC\ny,DE\n")
+    staged = [
+        "stage-manifest",
+        str(m),
+        "--out",
+        str(tmp_path / "l3.csv"),
+        "--input",
+        str(tmp_path / "seqs.csv"),
+    ]
+    assert main(staged) == EXIT_DATA
+    assert "1 ids of" in capsys.readouterr().err
     assert main(["concat", "--block", "bad", "--out", "x.parquet"]) == EXIT_DATA
     assert main(["select"]) == 2
+
+
+def test_report_lists_failed_steps(tmp_path):
+    (tmp_path / "res" / "failed").mkdir(parents=True)
+    (tmp_path / "res" / "failed" / "pca_motif.failed").write_text("Error: needs 2 finite rows | x\n")
+    summary = build_report(tmp_path / "res", tmp_path / "out")
+    assert summary["failed"] == [{"analysis": "pca_motif", "error": "Error: needs 2 finite rows \\| x"}]
+    assert "## Failed steps" in (tmp_path / "out" / "report.md").read_text()

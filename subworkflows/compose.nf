@@ -94,4 +94,5 @@ workflow COMPOSE {
     selection = KPNF_SELECT.out.report
     blocks    = KPNF_CONCAT.out.blocks
     figures   = KPNF_PLOT.out.figure
+    failed    = RUDDY_PCA_BLOCK.out.failed.mix(RUDDY_PCA_COMPOSED.out.failed, KPNF_PLOT.out.failed)
 }

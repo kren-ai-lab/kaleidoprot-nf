@@ -15,7 +15,17 @@ def comparisonPairs(p) {
 def checkParams(p) {
     def TOOLS = ['sylphy-encode', 'sylphy-embed', 'roxy', 'eris']
     def NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]*$/
+    // Every parameter in nextflow.config; anything else is a typo.
+    def KNOWN = [
+        'input', 'seq_column', 'label_column', 'structures', 'representations', 'compositions', 'comparisons',
+        'alignment', 'projection_components', 'comparison_components', 'projection_scaling', 'mantel_permutations',
+        'eda_max_columns', 'seed', 'selection', 'outdir', 'publish_dir_mode',
+    ]
     def errors = []
+    def unknown = p.keySet() - KNOWN
+    if (unknown) {
+        errors << "unknown parameters: ${unknown.sort().join(', ')} (check the spelling)"
+    }
     if (!p.input) {
         errors << "--input is required (table with columns id and ${p.seq_column})"
     }

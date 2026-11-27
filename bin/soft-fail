@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# soft-fail NAME CMD...: run CMD; if it exits 3 (the data cannot be analysed), save its error to NAME.failed
+# for the report and exit 0, so the rest of the pipeline goes on. Any other exit code fails the task as usual.
+name=$1
+shift
+"$@" 2> .soft-fail.err
+status=$?
+cat .soft-fail.err >&2
+[ "$status" -eq 3 ] || exit "$status"
+grep -v '^[[:space:]]*$' .soft-fail.err | tail -n 20 > "$name.failed"

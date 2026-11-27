@@ -64,5 +64,6 @@ workflow {
         COMPOSE.out.selection.collect().ifEmpty([]),
         COMPOSE.out.blocks.collect().ifEmpty([]),
         CHARACTERIZE.out.figures.mix(COMPOSE.out.figures).collect().ifEmpty([]),
+        REPRESENT.out.failed.mix(CHARACTERIZE.out.failed, COMPOSE.out.failed).collect().ifEmpty([]),
     )
 }

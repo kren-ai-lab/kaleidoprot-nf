@@ -143,6 +143,13 @@ def _compositions(root: Path) -> list[dict]:
     return rows
 
 
+def _failed(root: Path) -> list[dict]:
+    return [
+        {"analysis": f.stem, "error": " ".join(f.read_text(encoding="utf-8").split()).replace("|", "\\|")}
+        for f in sorted((root / "failed").glob("*.failed"))
+    ]
+
+
 def _table(rows: list[dict], columns: list[tuple[str, str]]) -> str:
     if not rows:
         return "_none_\n"
@@ -164,8 +171,16 @@ def build_report(
         "selection": _selections(root),
         "compositions": _compositions(root),
         "figures": sorted(p.name for p in (root / "figures").glob("*.png")),
+        "failed": _failed(root),
     }
     md = [f"# {title}\n"]
+    if summary["failed"]:
+        md.append(
+            "\n## Failed steps\n\n"
+            "The data did not allow these steps; the steps that need them (analyses, figures, comparisons,"
+            " compositions) were not run.\n\n"
+        )
+        md.append(_table(summary["failed"], [("analysis", "Step"), ("error", "Error")]))
     md.append("\n## Representations\n\n")
     md.append(
         _table(

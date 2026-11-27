@@ -33,12 +33,13 @@ process ROXY_COMPUTE {
     path sequences
 
     output:
-    tuple val(meta), path("${meta.name}.parquet"), emit: matrix
-    path "${meta.name}.parquet.provenance.json", emit: provenance
+    tuple val(meta), path("${meta.name}.parquet"), optional: true, emit: matrix
+    path "${meta.name}.parquet.provenance.json", optional: true, emit: provenance
+    path "rep_${meta.name}.failed", optional: true, emit: failed
 
     script:
     """
-    roxy compute ${sequences} \\
+    soft-fail rep_${meta.name} roxy compute ${sequences} \\
         --config ${config} \\
         --id-col id --seq-col ${params.seq_column} \\
         -o ${meta.name}.parquet \\

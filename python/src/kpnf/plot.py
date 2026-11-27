@@ -34,7 +34,9 @@ def plot_projection(
         {"id": id_column} if id_column != "id" else {}
     )
     if not {"PC1", "PC2"} <= set(scores.columns):
-        raise KpnfError(f"{scores_csv}: a 2D plot needs PC1 and PC2")
+        raise KpnfError(
+            f"{scores_csv}: a 2D plot needs PC1 and PC2; see the PCA provenance for why there are fewer"
+        )
     inputs = [scores_csv]
 
     axis = {"PC1": "PC1", "PC2": "PC2"}

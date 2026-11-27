@@ -13,14 +13,16 @@ process KPNF_STAGE_MANIFEST {
 
     input:
     path manifest
+    path input
 
     output:
     path 'manifest.local.csv'
 
     script:
     // Manifest paths are rewritten to the staged files; Eris resolves them against the CWD.
+    def strict = params.alignment == 'strict' ? "--input ${input}" : ''
     """
-    kpnf stage-manifest ${manifest} --prefix structures/ --out manifest.local.csv > /dev/null
+    kpnf stage-manifest ${manifest} --prefix structures/ --out manifest.local.csv ${strict} > /dev/null
     """
 
     stub:
@@ -107,13 +109,14 @@ process KPNF_PLOT {
     path labels
 
     output:
-    path "${meta.id}.png", emit: figure
-    path "${meta.id}.png.provenance.json", emit: provenance
+    path "${meta.id}.png", optional: true, emit: figure
+    path "${meta.id}.png.provenance.json", optional: true, emit: provenance
+    path "figure_${meta.id}.failed", optional: true, emit: failed
 
     script:
     def colour = labels && params.label_column ? "--labels ${labels} --label-column ${params.label_column}" : ''
     """
-    kpnf plot ${pca_dir} --out ${meta.id}.png --title '${meta.title ?: meta.id}' ${colour}
+    soft-fail figure_${meta.id} kpnf plot ${pca_dir} --out ${meta.id}.png --title '${meta.title ?: meta.id}' ${colour}
     """
 
     stub:
@@ -135,6 +138,7 @@ process KPNF_REPORT {
     path selection, stageAs: 'results/selection/*'
     path compositions, stageAs: 'results/compositions/*'
     path figures, stageAs: 'results/figures/*'
+    path failed, stageAs: 'results/failed/*'
 
     output:
     path "report", emit: report

@@ -36,17 +36,18 @@ process ERIS_FEATURES {
     path structures, stageAs: 'structures/*'
 
     output:
-    tuple val(meta), path("${meta.name}.csv"), emit: matrix
-    path "${meta.name}.csv.provenance.json", emit: provenance
-    path "${meta.name}_artifacts", emit: artifacts
-    path "${meta.name}_artifacts.provenance.json", emit: artifacts_provenance
+    tuple val(meta), path("${meta.name}.csv"), optional: true, emit: matrix
+    path "${meta.name}.csv.provenance.json", optional: true, emit: provenance
+    path "${meta.name}_artifacts", optional: true, emit: artifacts
+    path "${meta.name}_artifacts.provenance.json", optional: true, emit: artifacts_provenance
+    path "rep_${meta.name}.failed", optional: true, emit: failed
 
     script:
     def source = meta.features_source && meta.features_source != 'auto' ? "--source ${meta.features_source}" : ''
     """
-    eris batch encode ${manifest} --config ${config} --out ${meta.name}_artifacts
-    eris pack ${meta.name}_artifacts --out ${meta.name}_artifacts/index.csv
-    eris features ${meta.name}_artifacts/index.csv --out ${meta.name}.csv ${source}
+    soft-fail rep_${meta.name} eris batch encode ${manifest} --config ${config} --out ${meta.name}_artifacts
+    [ -e rep_${meta.name}.failed ] || soft-fail rep_${meta.name} eris pack ${meta.name}_artifacts --out ${meta.name}_artifacts/index.csv
+    [ -e rep_${meta.name}.failed ] || soft-fail rep_${meta.name} eris features ${meta.name}_artifacts/index.csv --out ${meta.name}.csv ${source}
     """
 
     stub:

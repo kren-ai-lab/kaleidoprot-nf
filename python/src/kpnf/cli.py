@@ -23,6 +23,7 @@ def _parser() -> argparse.ArgumentParser:
     s.add_argument("--out", required=True)
     s.add_argument("--path-column", default="path")
     s.add_argument("--prefix", default="", help="Prepended to every basename (e.g. the staging directory).")
+    s.add_argument("--input", help="Table whose ids the manifest must match exactly (strict alignment).")
 
     s = sub.add_parser("select", help="Unsupervised feature filtering of one block from its Ruddy EDA.")
     s.add_argument("matrix")
@@ -69,7 +70,13 @@ def _run(args: argparse.Namespace) -> dict | int:
         from kpnf.manifest import stage_manifest
 
         return {
-            "rows": stage_manifest(args.manifest, args.out, path_column=args.path_column, prefix=args.prefix)
+            "rows": stage_manifest(
+                args.manifest,
+                args.out,
+                path_column=args.path_column,
+                prefix=args.prefix,
+                input_table=args.input,
+            )
         }
     if args.command == "select":
         from kpnf.select import SelectionSettings, select_block

@@ -46,4 +46,5 @@ workflow CHARACTERIZE {
     pca         = RUDDY_PCA.out.pca            // channel: [ meta, pca_dir ]
     figures     = KPNF_PLOT.out.figure
     comparisons = RUDDY_COMPARE.out.comparison
+    failed      = RUDDY_EDA.out.failed.mix(RUDDY_PCA.out.failed, KPNF_PLOT.out.failed, RUDDY_COMPARE.out.failed)
 }
