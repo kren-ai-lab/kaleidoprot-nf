@@ -33,9 +33,9 @@ record RepresentOptions {
     input: Path
     seq_column: String
     cache_dir: String?
-    structures: Path?          // Eris manifest
+    structures: Path?           // Eris manifest
     structure_files: List<Path> // files the manifest points to
-    strict: Boolean            // the manifest must have exactly the ids of input
+    strict: Boolean             // the manifest must have exactly the ids of input
 }
 
 record Representation {

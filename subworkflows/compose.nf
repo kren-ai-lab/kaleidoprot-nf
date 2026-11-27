@@ -28,8 +28,17 @@ workflow COMPOSE {
         .filter { b -> b.reduce > 0 }
         .map { b ->
             def id = "block__${b.comp}__${b.rep}"
-            record(id: id, title: id, comp: b.comp, rep: b.rep, index: b.index, size: b.size,
-                   n_components: b.reduce, scaling: b.reduce_scaling, matrix: b.matrix)
+            record(
+                id: id,
+                title: id,
+                comp: b.comp,
+                rep: b.rep,
+                index: b.index,
+                size: b.size,
+                n_components: b.reduce,
+                scaling: b.reduce_scaling,
+                matrix: b.matrix,
+            )
         }
     reduced = RUDDY_PCA_BLOCK(to_reduce, opts.seed)
 
@@ -52,19 +61,28 @@ workflow COMPOSE {
         .map { comp, group ->
             def c = settings.find { s -> s.name == comp }
             def ordered = group.toSorted { p -> p.index }
-            record(name: c.name, scaling: c.scaling, alignment: c.alignment, n_components: c.n_components,
-                   reps: ordered.collect { p -> p.rep }.toList(), blocks: ordered.collect { p -> p.file }.toList())
+            record(
+                name: c.name,
+                scaling: c.scaling,
+                alignment: c.alignment,
+                n_components: c.n_components,
+                reps: ordered.collect { p -> p.rep }.toList(),
+                blocks: ordered.collect { p -> p.file }.toList(),
+            )
         }
     concatenated = KPNF_CONCAT(prepared)
 
     composed = RUDDY_PCA_COMPOSED(
-        concatenated
-            .join(prepared.map { c -> record(name: c.name, n_components: c.n_components) }, by: 'name')
-            .map { c ->
-                record(id: "comp__${c.name}", title: "composition ${c.name}",
-                       n_components: c.n_components, scaling: 'none', matrix: c.matrix)
-            },
-        opts.seed
+        concatenated.join(prepared.map { c -> record(name: c.name, n_components: c.n_components) }, by: 'name').map { c ->
+            record(
+                id: "comp__${c.name}",
+                title: "composition ${c.name}",
+                n_components: c.n_components,
+                scaling: 'none',
+                matrix: c.matrix,
+            )
+        },
+        opts.seed,
     )
     figures = KPNF_PLOT(composed.filter { p -> p.pca != null }, opts.labels, opts.label_column)
 
@@ -89,7 +107,7 @@ record Block {
     rep: String
     index: Integer
     size: Integer
-    reduce: Integer // 0: not reduced
+    reduce: Integer        // 0: not reduced
     reduce_scaling: String
     select: Boolean
 }
@@ -102,28 +120,34 @@ record Composition {
 }
 
 def blocksOf(compositions: List<Map>) -> List<Block> {
-    compositions.collectMany { comp ->
-        comp.blocks.withIndex().collect { b, i ->
-            record(
-                comp: comp.name as String,
-                rep: b.representation as String,
-                index: i,
-                size: comp.blocks.size(),
-                reduce: (b.reduce ?: 0) as Integer,
-                reduce_scaling: (b.reduce_scaling ?: 'none') as String,
-                select: (b.select ?: false) as Boolean
-            )
+    compositions
+        .collectMany { comp ->
+            comp.blocks
+                .withIndex()
+                .collect { b, i ->
+                    record(
+                        comp: comp.name as String,
+                        rep: b.representation as String,
+                        index: i,
+                        size: comp.blocks.size(),
+                        reduce: (b.reduce ?: 0) as Integer,
+                        reduce_scaling: (b.reduce_scaling ?: 'none') as String,
+                        select: (b.select ?: false) as Boolean,
+                    )
+                }
         }
-    }.toList()
+        .toList()
 }
 
 def compositionsOf(compositions: List<Map>, opts: ComposeOptions) -> List<Composition> {
-    compositions.collect { c ->
-        record(
-            name: c.name as String,
-            scaling: (c.scaling ?: 'block') as String,
-            alignment: (c.alignment ?: opts.alignment) as String,
-            n_components: (c.n_components ?: opts.projection_components) as Integer
-        )
-    }.toList()
+    compositions
+        .collect { c ->
+            record(
+                name: c.name as String,
+                scaling: (c.scaling ?: 'block') as String,
+                alignment: (c.alignment ?: opts.alignment) as String,
+                n_components: (c.n_components ?: opts.projection_components) as Integer,
+            )
+        }
+        .toList()
 }
