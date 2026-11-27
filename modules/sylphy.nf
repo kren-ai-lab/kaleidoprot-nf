@@ -71,7 +71,9 @@ process SYLPHY_EMBED {
     path "rep_${meta.name}.failed", optional: true, emit: failed
 
     script:
+    def cache = params.cache_dir ? "export SYLPHY_CACHE_DIR=${params.cache_dir}" : ''
     """
+    ${cache}
     soft-fail rep_${meta.name} sylphy embed \\
         --config ${config} \\
         -i ${sequences} --id-col id --seq-col ${params.seq_column} \\

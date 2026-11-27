@@ -16,4 +16,5 @@
 - Unknown parameters (e.g. a misspelled `seq_column`) are rejected before any task runs.
 - With `alignment: strict`, the structure manifest must have exactly the ids of `input`.
 - `docker` profile: HOME points to the task directory, so tools can write their caches and logs when run as the host user.
+- `cache_dir`: persistent cache for the models `sylphy embed` downloads, mounted in the docker and apptainer profiles. Without it, each task downloads its own copy.
 - The local profile installs the released libraries from PyPI (Sylphy 1.2.1, Roxy 0.4.0, Eris 0.2.0, Ruddy 0.2.1).

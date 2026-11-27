@@ -23,6 +23,10 @@ workflow {
         error("Invalid parameters:\n  - " + errors.join('\n  - '))
     }
 
+    if (params.cache_dir) {
+        file(params.cache_dir).mkdirs() // a missing bind-mount source fails (apptainer) or is created by root (docker)
+    }
+
     def reps = channel.fromList(params.representations)
         .map { r ->
             [

@@ -19,12 +19,15 @@ def checkParams(p) {
     def KNOWN = [
         'input', 'seq_column', 'label_column', 'structures', 'representations', 'compositions', 'comparisons',
         'alignment', 'projection_components', 'comparison_components', 'projection_scaling', 'mantel_permutations',
-        'eda_max_columns', 'seed', 'selection', 'outdir', 'publish_dir_mode',
+        'eda_max_columns', 'seed', 'selection', 'outdir', 'publish_dir_mode', 'cache_dir',
     ]
     def errors = []
     def unknown = p.keySet() - KNOWN
     if (unknown) {
         errors << "unknown parameters: ${unknown.sort().join(', ')} (check the spelling)"
+    }
+    if (p.cache_dir && !p.cache_dir.toString().startsWith('/')) {
+        errors << 'cache_dir must be an absolute path (it is mounted into the containers)'
     }
     if (!p.input) {
         errors << "--input is required (table with columns id and ${p.seq_column})"
