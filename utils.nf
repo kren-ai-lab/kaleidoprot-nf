@@ -32,6 +32,12 @@ def checkParams(p) {
     if (!p.input) {
         errors << "--input is required (table with columns id and ${p.seq_column})"
     }
+    else if (p.input ==~ /(?i).*\.(csv|tsv|txt)$/ && file(p.input).exists()) {
+        def lines = file(p.input).withReader { r -> [r.readLine(), r.readLine()] }.findAll { l -> l?.trim() }
+        if (lines.size() < 2) {
+            errors << "--input ${p.input} has ${lines ? 'a header but no rows' : 'no content'}"
+        }
+    }
     if (!(p.representations instanceof List) || !p.representations) {
         errors << 'representations: give a non-empty list (see examples/test/params.yaml)'
         return errors

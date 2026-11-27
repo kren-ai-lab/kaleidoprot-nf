@@ -13,6 +13,7 @@
 - `docker` and `apptainer` profiles: each process runs the released image of its tool from `ghcr.io/kren-ai-lab`. `stage-manifest` runs in its own task (`KPNF_STAGE_MANIFEST`), so Eris needs only its own image.
 - kpnf image on `ghcr.io/kren-ai-lab/kpnf`: `<version>` and `latest` on release tags, `main` on pushes to main.
 - A representation or analysis that the data does not allow (the tool exits 3) no longer stops the run: it is skipped, with its error under "Failed steps" in the report, and the steps that need it are not run. Other errors still stop the run.
+- The run fails, listing the reasons, when no representation could be generated; an input table without rows is rejected before any task runs.
 - Unknown parameters (e.g. a misspelled `seq_column`) are rejected before any task runs.
 - With `alignment: strict`, the structure manifest must have exactly the ids of `input`.
 - `docker` and `apptainer` profiles: HOME points to the task directory, so tools can write their caches and logs (Nextflow runs apptainer with `--no-home`).

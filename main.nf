@@ -71,4 +71,13 @@ workflow {
         CHARACTERIZE.out.figures.mix(COMPOSE.out.figures).collect().ifEmpty([]),
         REPRESENT.out.failed.mix(CHARACTERIZE.out.failed, COMPOSE.out.failed).collect().ifEmpty([]),
     )
+
+    // A run without any representation is a failure, not an empty report.
+    REPRESENT.out.matrices.count()
+        .combine(REPRESENT.out.failed.map { f -> "${f.baseName - 'rep_'}: ${f.text.trim().readLines().last()}" }.toList().map { r -> [r] })
+        .subscribe { n, reasons ->
+            if (n == 0) {
+                error("No representation could be generated:\n  - " + reasons.join('\n  - '))
+            }
+        }
 }
