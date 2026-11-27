@@ -1,99 +1,120 @@
+nextflow.enable.types = true
+
 // Ruddy: EDA, projections and comparison of representation spaces.
 // Nothing is imputed. PCA excludes features with non-finite values (recorded in its provenance) rather than rows,
 // so every id stays; the other decisions taken from Ruddy's outputs live in kpnf.
 // An analysis the data does not allow (exit 3) is recorded as <name>.failed for the report instead of stopping the run.
 
 process RUDDY_EDA {
-    tag "${meta.name}"
+    tag name
     label 'process_medium'
     container 'ghcr.io/kren-ai-lab/ruddy:0.2.2'
-    publishDir "${params.outdir}/eda", mode: params.publish_dir_mode
 
     input:
-    tuple val(meta), path(matrix)
+    record(name: String, matrix: Path)
+    max_columns: Integer
 
     output:
-    tuple val(meta.name), path("eda_${meta.name}"), optional: true, emit: eda
-    path "eda_${meta.name}.provenance.json", optional: true, emit: provenance
-    path "eda_${meta.name}.failed", optional: true, emit: failed
+    record(
+        name: name,
+        eda: file("eda_${name}", optional: true),
+        provenance: file("eda_${name}.provenance.json", optional: true),
+        failed: file("eda_${name}.failed", optional: true)
+    )
 
     script:
     """
-    soft-fail eda_${meta.name} ruddy -q inspect univariate ${matrix} \\
+    soft-fail eda_${name} ruddy -q inspect univariate ${matrix} \\
         --id-column id \\
-        --max-pairwise-columns ${params.eda_max_columns} \\
-        --output-dir eda_${meta.name}
+        --max-pairwise-columns ${max_columns} \\
+        --output-dir eda_${name}
     """
 
     stub:
     """
-    mkdir -p eda_${meta.name}
-    touch eda_${meta.name}.provenance.json
+    mkdir -p eda_${name}
+    touch eda_${name}.provenance.json
     """
 }
 
 process RUDDY_PCA {
-    tag "${meta.id}"
+    tag id
     label 'process_medium'
     container 'ghcr.io/kren-ai-lab/ruddy:0.2.2'
-    publishDir "${params.outdir}/projections", mode: params.publish_dir_mode
 
     input:
-    tuple val(meta), path(matrix)
+    record(id: String, title: String, n_components: Integer, scaling: String, matrix: Path)
+    seed: Integer
 
     output:
-    tuple val(meta), path("pca_${meta.id}"), optional: true, emit: pca
-    path "pca_${meta.id}.provenance.json", optional: true, emit: provenance
-    path "pca_${meta.id}.failed", optional: true, emit: failed
+    record(
+        id: id,
+        title: title,
+        pca: file("pca_${id}", optional: true),
+        provenance: file("pca_${id}.provenance.json", optional: true),
+        failed: file("pca_${id}.failed", optional: true)
+    )
 
     script:
     """
-    soft-fail pca_${meta.id} ruddy -q project pca ${matrix} \\
+    soft-fail pca_${id} ruddy -q project pca ${matrix} \\
         --id-column id \\
-        --n-components ${meta.n_components} \\
-        --scaling ${meta.scaling} \\
+        --n-components ${n_components} \\
+        --scaling ${scaling} \\
         --non-finite exclude_features \\
-        --random-state ${params.seed} \\
-        --output-dir pca_${meta.id}
+        --random-state ${seed} \\
+        --output-dir pca_${id}
     """
 
     stub:
     """
-    mkdir -p pca_${meta.id}
-    touch pca_${meta.id}.provenance.json
+    mkdir -p pca_${id}
+    touch pca_${id}/pca_scores.csv
+    touch pca_${id}.provenance.json
     """
 }
 
 process RUDDY_COMPARE {
-    tag "${x_name} vs ${y_name}"
+    tag "${x} vs ${y}"
     label 'process_medium'
     container 'ghcr.io/kren-ai-lab/ruddy:0.2.2'
-    publishDir "${params.outdir}/comparisons", mode: params.publish_dir_mode
 
     input:
-    tuple val(x_name), path(x_matrix, stageAs: 'x/*'), val(y_name), path(y_matrix, stageAs: 'y/*')
+    record(x: String, x_scores: Path, y: String, y_scores: Path)
+    components: Integer
+    alignment: String
+    permutations: Integer
+    seed: Integer
+
+    stage:
+    stageAs x_scores, 'x/*'
+    stageAs y_scores, 'y/*'
 
     output:
-    path "cmp_${x_name}__${y_name}", optional: true, emit: comparison
-    path "cmp_${x_name}__${y_name}.provenance.json", optional: true, emit: provenance
-    path "cmp_${x_name}__${y_name}.failed", optional: true, emit: failed
+    record(
+        x: x,
+        y: y,
+        comparison: file("cmp_${x}__${y}", optional: true),
+        provenance: file("cmp_${x}__${y}.provenance.json", optional: true),
+        failed: file("cmp_${x}__${y}.failed", optional: true)
+    )
 
     script:
     // PCA scores also carry source_row_index, so the features are named explicitly.
-    def features = (1..params.comparison_components).collect { i -> "--x-feature-column PC${i} --y-feature-column PC${i}" }.join(' ')
+    def features = (1..components).collect { i -> "--x-feature-column PC${i} --y-feature-column PC${i}" }.join(' ')
     """
-    soft-fail cmp_${x_name}__${y_name} ruddy -q analyze representation ${x_matrix} ${y_matrix} \\
+    soft-fail cmp_${x}__${y} ruddy -q analyze representation ${x_scores} ${y_scores} \\
         --x-id-column id --y-id-column id \\
         ${features} \\
-        --representation-alignment ${params.alignment} \\
-        --mantel-permutations ${params.mantel_permutations} \\
-        --random-state ${params.seed} \\
-        --output-dir cmp_${x_name}__${y_name}
+        --representation-alignment ${alignment} \\
+        --mantel-permutations ${permutations} \\
+        --random-state ${seed} \\
+        --output-dir cmp_${x}__${y}
     """
 
     stub:
     """
-    mkdir -p cmp_${x_name}__${y_name}
-    touch cmp_${x_name}__${y_name}.provenance.json
+    mkdir -p cmp_${x}__${y}
+    touch cmp_${x}__${y}.provenance.json
     """
 }

@@ -1,50 +1,73 @@
+nextflow.enable.types = true
+
 // Characterize each representation on its own (EDA + PCA + figure) and compare pairs of
 // representation spaces (CCA, CKA, Procrustes, Mantel, distance similarity) on their PCA scores.
 
-include { RUDDY_EDA     } from '../modules/ruddy'
-include { RUDDY_PCA     } from '../modules/ruddy'
-include { RUDDY_COMPARE } from '../modules/ruddy'
-include { KPNF_PLOT     } from '../modules/kpnf'
+include { RUDDY_EDA      } from '../modules/ruddy'
+include { RUDDY_PCA      } from '../modules/ruddy'
+include { RUDDY_COMPARE  } from '../modules/ruddy'
+include { KPNF_PLOT      } from '../modules/kpnf'
+include { Representation } from './represent'
 
 workflow CHARACTERIZE {
     take:
-    matrices    // channel: [ meta, matrix ]
-    labels      // value channel: table with id + label column, or []
-    comparisons // list of [x_name, y_name]
+    reps: Channel<Representation> // only the ones with a matrix
+    pairs: List<List<String>>     // [x_name, y_name]
+    opts: AnalysisOptions
 
     main:
-    RUDDY_EDA(matrices)
+    eda = RUDDY_EDA(reps, opts.eda_max_columns)
 
-    RUDDY_PCA(
-        matrices.map { meta, matrix ->
-            [
-                [
-                    id: meta.name,
-                    title: "${meta.name} (${meta.tool})",
-                    n_components: params.comparison_components,
-                    scaling: params.projection_scaling
-                ],
-                matrix
-            ]
-        }
+    pca = RUDDY_PCA(
+        reps.map { r ->
+            record(
+                id: r.name,
+                title: "${r.name} (${r.tool})",
+                n_components: opts.comparison_components,
+                scaling: opts.projection_scaling,
+                matrix: r.matrix
+            )
+        },
+        opts.seed
     )
-    KPNF_PLOT(RUDDY_PCA.out.pca, labels)
+    done = pca.filter { p -> p.pca != null }
+    figures = KPNF_PLOT(done, opts.labels, opts.label_column)
 
     // Raw matrices make CCA degenerate (features >= samples), let large-magnitude columns dominate CKA and
     // Mantel, and rule out Procrustes (different widths); standardized PCA scores of equal width avoid all three.
-    def by_name = RUDDY_PCA.out.pca.map { meta, pca_dir -> [meta.id, pca_dir.resolve('pca_scores.csv')] }
-    def pairs = channel.fromList(comparisons)
-        .map { pair -> [pair[0], pair[1]] }
-        .combine(by_name, by: 0) // [x, y, x_matrix]
-        .map { x, y, x_matrix -> [y, x, x_matrix] }
-        .combine(by_name, by: 0) // [y, x, x_matrix, y_matrix]
-        .map { y, x, x_matrix, y_matrix -> [x, x_matrix, y, y_matrix] }
-    RUDDY_COMPARE(pairs)
+    scores = done.map { p -> record(name: p.id, scores: p.pca.resolve('pca_scores.csv')) }
+    compared = RUDDY_COMPARE(
+        channel.fromList(pairs)
+            .map { pair -> record(x: pair[0], y: pair[1]) }
+            .join(scores.map { s -> record(x: s.name, x_scores: s.scores) }, by: 'x')
+            .join(scores.map { s -> record(y: s.name, y_scores: s.scores) }, by: 'y'),
+        opts.comparison_components,
+        opts.alignment,
+        opts.mantel_permutations,
+        opts.seed
+    )
 
     emit:
-    eda         = RUDDY_EDA.out.eda            // channel: [ name, eda_dir ]
-    pca         = RUDDY_PCA.out.pca            // channel: [ meta, pca_dir ]
-    figures     = KPNF_PLOT.out.figure
-    comparisons = RUDDY_COMPARE.out.comparison
-    failed      = RUDDY_EDA.out.failed.mix(RUDDY_PCA.out.failed, KPNF_PLOT.out.failed, RUDDY_COMPARE.out.failed)
+    eda: Channel<Eda> = eda
+    pca: Channel<Record> = pca             // id, title, pca, provenance, failed
+    figures: Channel<Record> = figures     // id, figure, provenance, failed
+    comparisons: Channel<Record> = compared // x, y, comparison, provenance, failed
+}
+
+record AnalysisOptions {
+    comparison_components: Integer
+    projection_scaling: String
+    eda_max_columns: Integer
+    mantel_permutations: Integer
+    alignment: String
+    seed: Integer
+    labels: Path?        // table with id + label column
+    label_column: String?
+}
+
+record Eda {
+    name: String
+    eda: Path?
+    provenance: Path?
+    failed: Path?
 }

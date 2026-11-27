@@ -1,3 +1,5 @@
+nextflow.enable.types = true
+
 // Generate every representation listed in params.representations; VALIDATE has already checked the configs.
 
 include { SYLPHY_ENCODE       } from '../modules/sylphy'
@@ -5,33 +7,43 @@ include { SYLPHY_EMBED        } from '../modules/sylphy'
 include { ROXY_COMPUTE        } from '../modules/roxy'
 include { ERIS_FEATURES       } from '../modules/eris'
 include { KPNF_STAGE_MANIFEST } from '../modules/kpnf'
+include { Spec                } from './validate'
 
 workflow REPRESENT {
     take:
-    reps       // channel: [ meta(name, tool, features_source), config ], from VALIDATE
-    sequences  // value channel: input table (id, sequence, ...)
-    manifest   // value channel: Eris manifest, or [] when no structures
-    structures // value channel: list of structure files, or []
+    reps: Channel<Spec>
+    opts: RepresentOptions
 
     main:
-    def ready = reps.branch { meta, _config ->
-        encode: meta.tool == 'sylphy-encode'
-        embed: meta.tool == 'sylphy-embed'
-        roxy: meta.tool == 'roxy'
-        eris: meta.tool == 'eris'
+    encoded = SYLPHY_ENCODE(reps.filter { r -> r.tool == 'sylphy-encode' }, opts.input, opts.seq_column)
+    embedded = SYLPHY_EMBED(reps.filter { r -> r.tool == 'sylphy-embed' }, opts.input, opts.seq_column, opts.cache_dir)
+    computed = ROXY_COMPUTE(reps.filter { r -> r.tool == 'roxy' }, opts.input, opts.seq_column)
+    all = encoded.mix(embedded).mix(computed)
+    if (opts.structures) {
+        staged = KPNF_STAGE_MANIFEST(opts.structures, opts.input, opts.strict)
+        all = all.mix(ERIS_FEATURES(reps.filter { r -> r.tool == 'eris' }, staged, opts.structure_files))
     }
 
-    SYLPHY_ENCODE(ready.encode, sequences)
-    SYLPHY_EMBED(ready.embed, sequences)
-    ROXY_COMPUTE(ready.roxy, sequences)
-    KPNF_STAGE_MANIFEST(manifest.filter { m -> m }, sequences)
-    ERIS_FEATURES(ready.eris, KPNF_STAGE_MANIFEST.out, structures)
-
-    def all_matrices = SYLPHY_ENCODE.out.matrix.mix(SYLPHY_EMBED.out.matrix, ROXY_COMPUTE.out.matrix, ERIS_FEATURES.out.matrix)
-    def all_provenance = SYLPHY_ENCODE.out.provenance.mix(SYLPHY_EMBED.out.provenance, ROXY_COMPUTE.out.provenance, ERIS_FEATURES.out.provenance)
-
     emit:
-    matrices   = all_matrices   // channel: [ meta, matrix ]
-    provenance = all_provenance // channel: sidecar of each matrix
-    failed     = SYLPHY_ENCODE.out.failed.mix(SYLPHY_EMBED.out.failed, ROXY_COMPUTE.out.failed, ERIS_FEATURES.out.failed)
+    // Every representation, including the ones that failed (matrix null, failed set).
+    reps: Channel<Representation> = all
+}
+
+record RepresentOptions {
+    input: Path
+    seq_column: String
+    cache_dir: String?
+    structures: Path?          // Eris manifest
+    structure_files: List<Path> // files the manifest points to
+    strict: Boolean            // the manifest must have exactly the ids of input
+}
+
+record Representation {
+    name: String
+    tool: String
+    matrix: Path?
+    provenance: Path?
+    artifacts: Path?
+    artifacts_provenance: Path?
+    failed: Path?
 }

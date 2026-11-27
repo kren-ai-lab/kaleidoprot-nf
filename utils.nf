@@ -1,4 +1,4 @@
-// Parameter helpers for main.nf: checks beyond the schema, comparison pairs and inline configs.
+// Parameter helpers for main.nf: checks beyond the schema, comparison pairs, inline configs and structure files.
 
 // Pairs of representation names to compare: 'all', or a list of [x, y].
 def comparisonPairs(p) {
@@ -11,16 +11,10 @@ def comparisonPairs(p) {
     return (p.comparisons ?: []).collect { pair -> pair as List }
 }
 
-// Checks nextflow_schema.json cannot express (run after validateParameters): unknown params, input rows,
-// uniqueness and cross-references between representations, comparisons and compositions.
+// Checks nextflow_schema.json cannot express (run after validateParameters): input rows, uniqueness and
+// cross-references between representations, comparisons and compositions.
 def checkParams(p) {
     def errors = []
-    def schema = new groovy.json.JsonSlurper().parse(file("${projectDir}/nextflow_schema.json").toFile())
-    def known = schema['$defs'].values().collectMany { group -> group.properties.keySet() } + ['helpFull', 'showHidden'] // nf-schema's own
-    def unknown = p.keySet() - known
-    if (unknown) {
-        errors << "unknown parameters: ${unknown.sort().join(', ')} (check the spelling, or see --help)"
-    }
     if (p.input ==~ /(?i).*\.(csv|tsv|txt)$/) {
         def lines = file(p.input).withReader { r -> [r.readLine(), r.readLine()] }.findAll { l -> l?.trim() }
         if (lines.size() < 2) {
@@ -70,4 +64,12 @@ def inlineConfig(name, config) {
         f.text = text
     }
     return f
+}
+
+// Files listed in an Eris manifest; relative paths resolve against the manifest.
+def structureFiles(manifest) {
+    manifest.splitCsv(header: true).collect { row ->
+        def p = row.path.toString()
+        p.startsWith('/') ? file(p, checkIfExists: true) : file(manifest.parent.resolve(p).toString(), checkIfExists: true)
+    }
 }

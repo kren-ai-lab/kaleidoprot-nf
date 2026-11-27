@@ -1,17 +1,19 @@
+nextflow.enable.types = true
+
 // Eris: structure-based representations.
 // One task runs batch encode -> pack -> features, so the matrix that leaves this module is the
 // structure-level feature table (id + features). The native artifacts are published for reuse.
 
 process ERIS_VALIDATE {
-    tag "${meta.name}"
+    tag name
     label 'process_single'
     container 'ghcr.io/kren-ai-lab/eris:0.3.0'
 
     input:
-    tuple val(meta), path(config)
+    record(name: String, config: Path)
 
     output:
-    val(meta.name), emit: ok
+    name
 
     script:
     """
@@ -25,37 +27,43 @@ process ERIS_VALIDATE {
 }
 
 process ERIS_FEATURES {
-    tag "${meta.name}"
+    tag name
     label 'process_medium'
     container 'ghcr.io/kren-ai-lab/eris:0.3.0'
-    publishDir "${params.outdir}/representations", mode: params.publish_dir_mode
 
     input:
-    tuple val(meta), path(config)
-    path manifest  // staged by KPNF_STAGE_MANIFEST: paths point under structures/
-    path structures, stageAs: 'structures/*'
+    record(name: String, tool: String, config: Path, features_source: String?, pool: String?)
+    manifest: Path // staged by KPNF_STAGE_MANIFEST: paths point under structures/
+    structures: List<Path>
+
+    stage:
+    stageAs structures, 'structures/*'
 
     output:
-    tuple val(meta), path("${meta.name}.csv"), optional: true, emit: matrix
-    path "${meta.name}.csv.provenance.json", optional: true, emit: provenance
-    path "${meta.name}_artifacts", optional: true, emit: artifacts
-    path "${meta.name}_artifacts.provenance.json", optional: true, emit: artifacts_provenance
-    path "rep_${meta.name}.failed", optional: true, emit: failed
+    record(
+        name: name,
+        tool: tool,
+        matrix: file("${name}.csv", optional: true),
+        provenance: file("${name}.csv.provenance.json", optional: true),
+        artifacts: file("${name}_artifacts", optional: true),
+        artifacts_provenance: file("${name}_artifacts.provenance.json", optional: true),
+        failed: file("rep_${name}.failed", optional: true)
+    )
 
     script:
-    def source = meta.features_source && meta.features_source != 'auto' ? "--source ${meta.features_source}" : ''
-    def pool = meta.pool ? "--pool ${meta.pool}" : ''
+    def source = features_source && features_source != 'auto' ? "--source ${features_source}" : ''
+    def pooling = pool ? "--pool ${pool}" : ''
     """
-    soft-fail rep_${meta.name} eris batch encode ${manifest} --config ${config} --out ${meta.name}_artifacts
-    [ -e rep_${meta.name}.failed ] || soft-fail rep_${meta.name} eris pack ${meta.name}_artifacts --out ${meta.name}_artifacts/index.csv
-    [ -e rep_${meta.name}.failed ] || soft-fail rep_${meta.name} eris features ${meta.name}_artifacts/index.csv --out ${meta.name}.csv ${source} ${pool}
+    soft-fail rep_${name} eris batch encode ${manifest} --config ${config} --out ${name}_artifacts
+    [ -e rep_${name}.failed ] || soft-fail rep_${name} eris pack ${name}_artifacts --out ${name}_artifacts/index.csv
+    [ -e rep_${name}.failed ] || soft-fail rep_${name} eris features ${name}_artifacts/index.csv --out ${name}.csv ${source} ${pooling}
     """
 
     stub:
     """
-    touch ${meta.name}.csv
-    touch ${meta.name}.csv.provenance.json
-    mkdir -p ${meta.name}_artifacts
-    touch ${meta.name}_artifacts.provenance.json
+    touch ${name}.csv
+    touch ${name}.csv.provenance.json
+    mkdir -p ${name}_artifacts
+    touch ${name}_artifacts.provenance.json
     """
 }

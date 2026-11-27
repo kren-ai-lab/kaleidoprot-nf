@@ -1,3 +1,5 @@
+nextflow.enable.types = true
+
 // Check every representation's --config with its tool's validate-config before anything runs.
 
 include { SYLPHY_VALIDATE } from '../modules/sylphy'
@@ -6,27 +8,26 @@ include { ERIS_VALIDATE   } from '../modules/eris'
 
 workflow VALIDATE {
     take:
-    reps // channel: [ meta(name, tool, features_source), config ]
+    reps: Channel<Spec>
 
     main:
-    def by_tool = reps.branch { meta, _config ->
-        sylphy: meta.tool in ['sylphy-encode', 'sylphy-embed']
-        roxy: meta.tool == 'roxy'
-        eris: meta.tool == 'eris'
-    }
-    SYLPHY_VALIDATE(by_tool.sylphy)
-    ROXY_VALIDATE(by_tool.roxy)
-    ERIS_VALIDATE(by_tool.eris)
+    sylphy = SYLPHY_VALIDATE(reps.filter { r -> r.tool in ['sylphy-encode', 'sylphy-embed'] })
+    roxy = ROXY_VALIDATE(reps.filter { r -> r.tool == 'roxy' })
+    eris = ERIS_VALIDATE(reps.filter { r -> r.tool == 'eris' })
 
     // Releases the representations only once every config passed.
-    def gate = SYLPHY_VALIDATE.out.ok
-        .mix(ROXY_VALIDATE.out.ok, ERIS_VALIDATE.out.ok)
-        .collect()
-        .map { _names -> 'validated' }
-    def validated = reps
-        .combine(gate)
-        .map { meta, config, _gate -> [meta, config] }
+    gate = sylphy.mix(roxy).mix(eris).collect()
+    validated = reps.combine(validated: gate)
 
     emit:
-    reps = validated // channel: [ meta, config ], emitted after every validate-config passed
+    reps: Channel<Spec> = validated
+}
+
+// One entry of params.representations, with its config as a file.
+record Spec {
+    name: String
+    tool: String
+    config: Path
+    features_source: String?
+    pool: String?
 }

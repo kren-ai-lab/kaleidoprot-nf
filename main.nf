@@ -9,84 +9,164 @@
  *   KPNF_REPORT   report.md + summary.json
  */
 
+nextflow.enable.types = true
+
 include { VALIDATE     } from './subworkflows/validate'
 include { REPRESENT    } from './subworkflows/represent'
 include { CHARACTERIZE } from './subworkflows/characterize'
 include { COMPOSE      } from './subworkflows/compose'
 include { KPNF_REPORT  } from './modules/kpnf'
 
-include { checkParams ; comparisonPairs ; inlineConfig } from './utils'
-include { paramsHelp ; validateParameters                } from 'plugin/nf-schema'
+include { checkParams ; comparisonPairs ; inlineConfig ; structureFiles } from './utils'
+include { paramsHelp ; validateParameters                               } from 'plugin/nf-schema'
+
+// Described in nextflow_schema.json (see --help). outdir and publish_dir_mode only affect the config.
+params {
+    // Inputs
+    input: Path?            // required; nullable so that --help runs without it
+    seq_column: String = 'sequence'
+    label_column: String?
+    structures: Path?
+
+    // Workflow definition (normally given with -params-file, see examples/test/params.yaml)
+    representations: List<Map> = []
+    compositions: List<Map> = []
+    comparisons: Object = 'all' // 'all' or a list of [x, y] pairs
+
+    // Analysis options
+    alignment: String = 'strict'
+    projection_components: Integer = 2
+    comparison_components: Integer = 5
+    projection_scaling: String = 'standard'
+    mantel_permutations: Integer = 999
+    eda_max_columns: Integer = 5000
+    seed: Integer = 0
+    selection: Map = [max_missing: 0.0, near_constant: 0.99, abs_rho: 0.90, method: 'spearman', max_features: null]
+
+    cache_dir: String?      // persistent cache for downloaded models; default: each task downloads its own
+    help: Boolean
+}
 
 workflow {
+    main:
     if (params.help) {
         log.info(paramsHelp(
             parameter: params.help.toString() in ['true', 'false'] ? null : params.help,
             command: 'nextflow run kren-ai-lab/kaleidoprot-nf -profile docker -params-file params.yaml',
         ))
-        exit(0)
+        exit(0, '')
     }
     validateParameters()
     def errors = checkParams(params)
     if (errors) {
         error("Invalid parameters:\n  - " + errors.join('\n  - '))
     }
-
     if (params.cache_dir) {
         file(params.cache_dir).mkdirs() // a missing bind-mount source fails (apptainer) or is created by root (docker)
     }
 
-    def reps = channel.fromList(params.representations)
-        .map { r ->
-            [
-                [
-                    name: r.name,
-                    tool: r.tool,
-                    features_source: r.features_source ?: 'auto',
-                    pool: r.pool
-                ],
-                r.config instanceof Map ? inlineConfig(r.name, r.config) : file(r.config, checkIfExists: true)
-            ]
-        }
-    def sequences = channel.value(file(params.input, checkIfExists: true))
-    def labels = channel.value(params.label_column ? file(params.input) : [])
-
-    def manifest = channel.value([])
-    def structures = channel.value([])
-    if (params.structures) {
-        def manifest_file = file(params.structures, checkIfExists: true)
-        def base = manifest_file.parent
-        def files = manifest_file
-            .splitCsv(header: true)
-            .collect { row ->
-                def p = row.path.toString()
-                p.startsWith('/') ? file(p, checkIfExists: true) : file(base.resolve(p).toString(), checkIfExists: true)
-            }
-        manifest = channel.value(manifest_file)
-        structures = channel.value(files)
+    specs = channel.fromList(params.representations).map { r ->
+        record(
+            name: r.name as String,
+            tool: r.tool as String,
+            config: r.config instanceof Map ? inlineConfig(r.name, r.config) : file(r.config as String, checkIfExists: true),
+            features_source: r.features_source as String,
+            pool: r.pool as String
+        )
     }
+    validated = VALIDATE(specs)
+    all_reps = REPRESENT(
+        validated,
+        record(
+            input: params.input,
+            seq_column: params.seq_column,
+            cache_dir: params.cache_dir,
+            structures: params.structures,
+            structure_files: params.structures ? structureFiles(params.structures) : [],
+            strict: params.alignment == 'strict'
+        )
+    )
+    reps = all_reps.filter { r -> r.matrix != null }
 
-    VALIDATE(reps)
-    REPRESENT(VALIDATE.out.reps, sequences, manifest, structures)
-    CHARACTERIZE(REPRESENT.out.matrices, labels, comparisonPairs(params))
-    COMPOSE(REPRESENT.out.matrices, CHARACTERIZE.out.eda, params.compositions ?: [], labels)
-
-    KPNF_REPORT(
-        REPRESENT.out.provenance.collect().ifEmpty([]),
-        CHARACTERIZE.out.pca.mix(COMPOSE.out.pca).map { _meta, dir -> dir }.collect().ifEmpty([]),
-        CHARACTERIZE.out.comparisons.collect().ifEmpty([]),
-        COMPOSE.out.selection.collect().ifEmpty([]),
-        COMPOSE.out.blocks.collect().ifEmpty([]),
-        CHARACTERIZE.out.figures.mix(COMPOSE.out.figures).collect().ifEmpty([]),
-        REPRESENT.out.failed.mix(CHARACTERIZE.out.failed, COMPOSE.out.failed).collect().ifEmpty([]),
+    labels = params.label_column ? params.input : null
+    characterized = CHARACTERIZE(
+        reps,
+        comparisonPairs(params),
+        record(
+            comparison_components: params.comparison_components,
+            projection_scaling: params.projection_scaling,
+            eda_max_columns: params.eda_max_columns,
+            mantel_permutations: params.mantel_permutations,
+            alignment: params.alignment,
+            seed: params.seed,
+            labels: labels,
+            label_column: params.label_column
+        )
+    )
+    composed = COMPOSE(
+        reps,
+        characterized.eda,
+        params.compositions,
+        record(
+            selection: params.selection,
+            alignment: params.alignment,
+            projection_components: params.projection_components,
+            seed: params.seed,
+            labels: labels,
+            label_column: params.label_column
+        )
     )
 
     // A run without any representation is a failure, not an empty report.
-    REPRESENT.out.matrices.count()
-        .combine(REPRESENT.out.failed.map { f -> "${f.baseName - 'rep_'}: ${f.text.trim().readLines().last()}" }.toList().map { r -> [r] })
-        .subscribe { n, reasons ->
-            if (n == 0) {
-                error("No representation could be generated:\n  - " + reasons.join('\n  - '))
-            }
+    all_reps.collect().subscribe { rs ->
+        if (rs.every { r -> r.matrix == null }) {
+            def reasons = rs.collect { r -> "${r.name}: ${r.failed?.text?.trim()?.readLines()?.last()}" }
+            error("No representation could be generated:\n  - " + reasons.join('\n  - '))
         }
+    }
+
+    eda = characterized.eda.filter { e -> e.eda != null }
+    projections = characterized.pca.mix(composed.pca).filter { p -> p.pca != null }
+    comparisons = characterized.comparisons.filter { c -> c.comparison != null }
+    figures = characterized.figures.mix(composed.figures).filter { f -> f.figure != null }
+    failed = all_reps.map { r -> r.failed }
+        .mix(characterized.eda.map { e -> e.failed })
+        .mix(characterized.pca.map { p -> p.failed })
+        .mix(characterized.figures.map { f -> f.failed })
+        .mix(characterized.comparisons.map { c -> c.failed })
+        .mix(composed.pca.map { p -> p.failed })
+        .mix(composed.figures.map { f -> f.failed })
+        .filter { f -> f != null }
+    report = KPNF_REPORT(
+        reps.map { r -> r.provenance }.collect(),
+        projections.map { p -> p.pca }.collect(),
+        comparisons.map { c -> c.comparison }.collect(),
+        composed.selection.map { s -> s.report }.collect(),
+        composed.compositions.map { c -> c.blocks }.collect(),
+        figures.map { f -> f.figure }.collect(),
+        failed.collect()
+    )
+
+    publish:
+    representations = reps.map { r ->
+        record(matrix: r.matrix, provenance: r.provenance, artifacts: r.artifacts, artifacts_provenance: r.artifacts_provenance)
+    }
+    eda = eda.map { e -> record(eda: e.eda, provenance: e.provenance) }
+    projections = projections.map { p -> record(pca: p.pca, provenance: p.provenance) }
+    comparisons = comparisons.map { c -> record(comparison: c.comparison, provenance: c.provenance) }
+    selection = composed.selection.map { s -> record(selected: s.selected, report: s.report, provenance: s.provenance) }
+    compositions = composed.compositions.map { c -> record(matrix: c.matrix, blocks: c.blocks, provenance: c.provenance) }
+    figures = figures.map { f -> record(figure: f.figure, provenance: f.provenance) }
+    report = report
+}
+
+output {
+    representations { path 'representations' }
+    eda { path 'eda' }
+    projections { path 'projections' }
+    comparisons { path 'comparisons' }
+    selection { path 'selection' }
+    compositions { path 'compositions' }
+    figures { path 'figures' }
+    report { path '.' }
 }

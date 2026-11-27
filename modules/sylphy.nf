@@ -1,19 +1,21 @@
+nextflow.enable.types = true
+
 // Sylphy: sequence encodings and protein language model embeddings.
 // Paths go as flags; every other option comes from the representation's --config file.
 
 process SYLPHY_VALIDATE {
-    tag "${meta.name}"
+    tag name
     label 'process_single'
     container 'ghcr.io/kren-ai-lab/sylphy:1.2.2'
 
     input:
-    tuple val(meta), path(config)
+    record(name: String, tool: String, config: Path)
 
     output:
-    val(meta.name), emit: ok
+    name
 
     script:
-    def target = meta.tool == 'sylphy-embed' ? 'embed' : 'encode'
+    def target = tool == 'sylphy-embed' ? 'embed' : 'encode'
     """
     sylphy validate-config ${target} ${config} --json > validation.json || { cat validation.json >&2; exit 2; }
     """
@@ -25,65 +27,74 @@ process SYLPHY_VALIDATE {
 }
 
 process SYLPHY_ENCODE {
-    tag "${meta.name}"
+    tag name
     label 'process_medium'
     container 'ghcr.io/kren-ai-lab/sylphy:1.2.2'
-    publishDir "${params.outdir}/representations", mode: params.publish_dir_mode
 
     input:
-    tuple val(meta), path(config)
-    path sequences
+    record(name: String, tool: String, config: Path)
+    sequences: Path
+    seq_column: String
 
     output:
-    tuple val(meta), path("${meta.name}.parquet"), optional: true, emit: matrix
-    path "${meta.name}.parquet.provenance.json", optional: true, emit: provenance
-    path "rep_${meta.name}.failed", optional: true, emit: failed
+    record(
+        name: name,
+        tool: tool,
+        matrix: file("${name}.parquet", optional: true),
+        provenance: file("${name}.parquet.provenance.json", optional: true),
+        failed: file("rep_${name}.failed", optional: true)
+    )
 
     script:
     """
-    soft-fail rep_${meta.name} sylphy encode \\
+    soft-fail rep_${name} sylphy encode \\
         --config ${config} \\
-        -i ${sequences} --id-col id --seq-col ${params.seq_column} \\
-        -o ${meta.name}.parquet \\
+        -i ${sequences} --id-col id --seq-col ${seq_column} \\
+        -o ${name}.parquet \\
         --log-level WARNING
     """
 
     stub:
     """
-    touch ${meta.name}.parquet
-    touch ${meta.name}.parquet.provenance.json
+    touch ${name}.parquet
+    touch ${name}.parquet.provenance.json
     """
 }
 
 process SYLPHY_EMBED {
-    tag "${meta.name}"
+    tag name
     label 'process_gpu'
     container 'ghcr.io/kren-ai-lab/sylphy:1.2.2-full'
-    publishDir "${params.outdir}/representations", mode: params.publish_dir_mode
 
     input:
-    tuple val(meta), path(config)
-    path sequences
+    record(name: String, tool: String, config: Path)
+    sequences: Path
+    seq_column: String
+    cache_dir: String?
 
     output:
-    tuple val(meta), path("${meta.name}.parquet"), optional: true, emit: matrix
-    path "${meta.name}.parquet.provenance.json", optional: true, emit: provenance
-    path "rep_${meta.name}.failed", optional: true, emit: failed
+    record(
+        name: name,
+        tool: tool,
+        matrix: file("${name}.parquet", optional: true),
+        provenance: file("${name}.parquet.provenance.json", optional: true),
+        failed: file("rep_${name}.failed", optional: true)
+    )
 
     script:
-    def cache = params.cache_dir ? "export SYLPHY_CACHE_DIR=${params.cache_dir}" : ''
+    def cache = cache_dir ? "export SYLPHY_CACHE_DIR=${cache_dir}" : ''
     """
     ${cache}
-    soft-fail rep_${meta.name} sylphy embed \\
+    soft-fail rep_${name} sylphy embed \\
         --config ${config} \\
-        -i ${sequences} --id-col id --seq-col ${params.seq_column} \\
-        -o ${meta.name}.parquet \\
+        -i ${sequences} --id-col id --seq-col ${seq_column} \\
+        -o ${name}.parquet \\
         --log-level WARNING
     """
 
     stub:
     """
-    touch ${meta.name}.parquet
-    touch ${meta.name}.parquet.provenance.json
+    touch ${name}.parquet
+    touch ${name}.parquet.provenance.json
     """
 }

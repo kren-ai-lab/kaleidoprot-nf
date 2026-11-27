@@ -1,3 +1,5 @@
+nextflow.enable.types = true
+
 // kpnf: glue that belongs to the pipeline rather than to any single library
 // (feature selection, block concatenation, scaling, plots, report).
 
@@ -12,17 +14,18 @@ process KPNF_STAGE_MANIFEST {
     container "ghcr.io/kren-ai-lab/kpnf:${kpnfTag()}"
 
     input:
-    path manifest
-    path input
+    manifest: Path
+    input: Path
+    strict: Boolean
 
     output:
-    path 'manifest.local.csv'
+    file('manifest.local.csv')
 
     script:
     // Manifest paths are rewritten to the staged files; Eris resolves them against the CWD.
-    def strict = params.alignment == 'strict' ? "--input ${input}" : ''
+    def check = strict ? "--input ${input}" : ''
     """
-    kpnf stage-manifest ${manifest} --prefix structures/ --out manifest.local.csv ${strict} > /dev/null
+    kpnf stage-manifest ${manifest} --prefix structures/ --out manifest.local.csv ${check} > /dev/null
     """
 
     stub:
@@ -32,116 +35,138 @@ process KPNF_STAGE_MANIFEST {
 }
 
 process KPNF_SELECT {
-    tag "${block.comp}:${block.rep}"
+    tag "${comp}:${rep}"
     label 'process_single'
     container "ghcr.io/kren-ai-lab/kpnf:${kpnfTag()}"
-    publishDir "${params.outdir}/selection", mode: params.publish_dir_mode
 
     input:
-    tuple val(block), path(matrix), path(eda_dir)
+    record(comp: String, rep: String, index: Integer, size: Integer, matrix: Path, eda: Path)
+    selection: Map
 
     output:
-    tuple val(block), path("${block.comp}__${block.rep}.selected.parquet"), emit: matrix
-    path "${block.comp}__${block.rep}.selection.csv", emit: report
-    path "${block.comp}__${block.rep}.selected.parquet.provenance.json", emit: provenance
+    record(
+        comp: comp,
+        rep: rep,
+        index: index,
+        size: size,
+        selected: file("${comp}__${rep}.selected.parquet"),
+        report: file("${comp}__${rep}.selection.csv"),
+        provenance: file("${comp}__${rep}.selected.parquet.provenance.json")
+    )
 
     script:
-    def s = params.selection
-    def cap = s.max_features ? "--max-features ${s.max_features}" : ''
+    def cap = selection.max_features ? "--max-features ${selection.max_features}" : ''
     """
     kpnf select ${matrix} \\
-        --eda-dir ${eda_dir} \\
-        --out ${block.comp}__${block.rep}.selected.parquet \\
-        --report ${block.comp}__${block.rep}.selection.csv \\
-        --max-missing ${s.max_missing} \\
-        --near-constant ${s.near_constant} \\
-        --abs-rho ${s.abs_rho} \\
-        --method ${s.method} ${cap}
+        --eda-dir ${eda} \\
+        --out ${comp}__${rep}.selected.parquet \\
+        --report ${comp}__${rep}.selection.csv \\
+        --max-missing ${selection.max_missing} \\
+        --near-constant ${selection.near_constant} \\
+        --abs-rho ${selection.abs_rho} \\
+        --method ${selection.method} ${cap}
     """
 
     stub:
     """
-    touch ${block.comp}__${block.rep}.selected.parquet
-    touch ${block.comp}__${block.rep}.selection.csv
-    touch ${block.comp}__${block.rep}.selected.parquet.provenance.json
+    touch ${comp}__${rep}.selected.parquet
+    touch ${comp}__${rep}.selection.csv
+    touch ${comp}__${rep}.selected.parquet.provenance.json
     """
 }
 
 process KPNF_CONCAT {
-    tag "${comp.name}"
+    tag name
     label 'process_single'
     container "ghcr.io/kren-ai-lab/kpnf:${kpnfTag()}"
-    publishDir "${params.outdir}/compositions", mode: params.publish_dir_mode
 
     input:
-    tuple val(comp), val(names), path(blocks, stageAs: 'blocks/?/*')
+    record(name: String, scaling: String, alignment: String, reps: List<String>, blocks: List<Path>)
+
+    stage:
+    stageAs blocks, 'blocks/?/*'
 
     output:
-    tuple val(comp), path("${comp.name}.parquet"), emit: matrix
-    path "${comp.name}.blocks.json", emit: blocks
-    path "${comp.name}.parquet.provenance.json", emit: provenance
+    record(
+        name: name,
+        matrix: file("${name}.parquet"),
+        blocks: file("${name}.blocks.json"),
+        provenance: file("${name}.parquet.provenance.json")
+    )
 
     script:
-    def args = [names, blocks instanceof List ? blocks : [blocks]].transpose().collect { n, f -> "--block ${n}=${f}" }.join(' ')
+    // Each block is staged as blocks/<n>/<file>, so blocks that share a file name do not collide.
+    def args = (0..<reps.size()).collect { i -> "--block ${reps[i]}=${blocks[i]}" }.join(' ')
     """
     kpnf concat ${args} \\
-        --out ${comp.name}.parquet \\
-        --scaling ${comp.scaling ?: 'block'} \\
-        --alignment ${comp.alignment ?: params.alignment}
+        --out ${name}.parquet \\
+        --scaling ${scaling} \\
+        --alignment ${alignment}
     """
 
     stub:
     """
-    touch ${comp.name}.parquet
-    touch ${comp.name}.blocks.json
-    touch ${comp.name}.parquet.provenance.json
+    touch ${name}.parquet
+    touch ${name}.blocks.json
+    touch ${name}.parquet.provenance.json
     """
 }
 
 process KPNF_PLOT {
-    tag "${meta.id}"
+    tag id
     label 'process_single'
     container "ghcr.io/kren-ai-lab/kpnf:${kpnfTag()}"
-    publishDir "${params.outdir}/figures", mode: params.publish_dir_mode
 
     input:
-    tuple val(meta), path(pca_dir)
-    path labels
+    record(id: String, title: String, pca: Path)
+    labels: Path?
+    label_column: String?
 
     output:
-    path "${meta.id}.png", optional: true, emit: figure
-    path "${meta.id}.png.provenance.json", optional: true, emit: provenance
-    path "figure_${meta.id}.failed", optional: true, emit: failed
+    record(
+        id: id,
+        figure: file("${id}.png", optional: true),
+        provenance: file("${id}.png.provenance.json", optional: true),
+        failed: file("figure_${id}.failed", optional: true)
+    )
 
     script:
-    def colour = labels && params.label_column ? "--labels ${labels} --label-column ${params.label_column}" : ''
+    def colour = labels && label_column ? "--labels ${labels} --label-column ${label_column}" : ''
     """
-    soft-fail figure_${meta.id} kpnf plot ${pca_dir} --out ${meta.id}.png --title '${meta.title ?: meta.id}' ${colour}
+    soft-fail figure_${id} kpnf plot ${pca} --out ${id}.png --title '${title}' ${colour}
     """
 
     stub:
     """
-    touch ${meta.id}.png
-    touch ${meta.id}.png.provenance.json
+    touch ${id}.png
+    touch ${id}.png.provenance.json
     """
 }
 
 process KPNF_REPORT {
     label 'process_single'
     container "ghcr.io/kren-ai-lab/kpnf:${kpnfTag()}"
-    publishDir "${params.outdir}", mode: params.publish_dir_mode
 
     input:
-    path representations, stageAs: 'results/representations/*'
-    path projections, stageAs: 'results/projections/*'
-    path comparisons, stageAs: 'results/comparisons/*'
-    path selection, stageAs: 'results/selection/*'
-    path compositions, stageAs: 'results/compositions/*'
-    path figures, stageAs: 'results/figures/*'
-    path failed, stageAs: 'results/failed/*'
+    representations: Bag<Path>
+    projections: Bag<Path>
+    comparisons: Bag<Path>
+    selection: Bag<Path>
+    compositions: Bag<Path>
+    figures: Bag<Path>
+    failed: Bag<Path>
+
+    stage:
+    stageAs representations, 'results/representations/*'
+    stageAs projections, 'results/projections/*'
+    stageAs comparisons, 'results/comparisons/*'
+    stageAs selection, 'results/selection/*'
+    stageAs compositions, 'results/compositions/*'
+    stageAs figures, 'results/figures/*'
+    stageAs failed, 'results/failed/*'
 
     output:
-    path "report", emit: report
+    file('report')
 
     script:
     """

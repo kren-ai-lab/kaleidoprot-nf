@@ -1,15 +1,17 @@
+nextflow.enable.types = true
+
 // Roxy: sequence-derived descriptors. Descriptor or family selection lives in the --config file.
 
 process ROXY_VALIDATE {
-    tag "${meta.name}"
+    tag name
     label 'process_single'
     container 'ghcr.io/kren-ai-lab/roxy:0.4.0'
 
     input:
-    tuple val(meta), path(config)
+    record(name: String, config: Path)
 
     output:
-    val(meta.name), emit: ok
+    name
 
     script:
     """
@@ -23,32 +25,36 @@ process ROXY_VALIDATE {
 }
 
 process ROXY_COMPUTE {
-    tag "${meta.name}"
+    tag name
     label 'process_medium'
     container 'ghcr.io/kren-ai-lab/roxy:0.4.0'
-    publishDir "${params.outdir}/representations", mode: params.publish_dir_mode
 
     input:
-    tuple val(meta), path(config)
-    path sequences
+    record(name: String, tool: String, config: Path)
+    sequences: Path
+    seq_column: String
 
     output:
-    tuple val(meta), path("${meta.name}.parquet"), optional: true, emit: matrix
-    path "${meta.name}.parquet.provenance.json", optional: true, emit: provenance
-    path "rep_${meta.name}.failed", optional: true, emit: failed
+    record(
+        name: name,
+        tool: tool,
+        matrix: file("${name}.parquet", optional: true),
+        provenance: file("${name}.parquet.provenance.json", optional: true),
+        failed: file("rep_${name}.failed", optional: true)
+    )
 
     script:
     """
-    soft-fail rep_${meta.name} roxy compute ${sequences} \\
+    soft-fail rep_${name} roxy compute ${sequences} \\
         --config ${config} \\
-        --id-col id --seq-col ${params.seq_column} \\
-        -o ${meta.name}.parquet \\
+        --id-col id --seq-col ${seq_column} \\
+        -o ${name}.parquet \\
         --no-progress
     """
 
     stub:
     """
-    touch ${meta.name}.parquet
-    touch ${meta.name}.parquet.provenance.json
+    touch ${name}.parquet
+    touch ${name}.parquet.provenance.json
     """
 }

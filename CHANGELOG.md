@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Static typing (Nextflow 26.10 or later): typed params in `main.nf` (unknown params are rejected by Nextflow), typed processes and workflows passing records, and workflow outputs (`output` block) instead of `publishDir`. The output tree is unchanged; `--outdir` and `--publish_dir_mode` still set where and how results are published.
 - Prototype pipeline: VALIDATE (`validate-config` of every config before anything runs), REPRESENT (Sylphy encode/embed, Roxy, Eris),
   CHARACTERIZE (Ruddy EDA, PCA, figures, pairwise representation comparison), COMPOSE (raw,
   PCA-reduced or selected blocks, concatenation, final PCA) and an aggregated report.
