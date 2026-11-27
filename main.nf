@@ -31,7 +31,7 @@ params {
     // Workflow definition (normally given with -params-file, see examples/test/params.yaml)
     representations: List<Map> = []
     compositions: List<Map> = []
-    comparisons: Object = 'all' // 'all' or a list of [x, y] pairs
+    comparisons: List<List<String>>? // [x, y] pairs; unset: every pair
 
     // Analysis options
     alignment: String = 'strict'

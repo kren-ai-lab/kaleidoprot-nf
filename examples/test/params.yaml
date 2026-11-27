@@ -32,7 +32,7 @@ representations:
     features_source: graph_attr
 
 # Pairwise comparison of representation spaces with `ruddy analyze representation`.
-comparisons: all
+# Unset compares every pair; otherwise list them, e.g. [[esm2_t6, roxy_composition]], or [] for none.
 
 # One-level compositions. Each block is raw, reduced (reduce: N PCA components with Ruddy) or
 # selected (select: true, unsupervised filter from the block's Ruddy EDA). scaling: none | standard | block

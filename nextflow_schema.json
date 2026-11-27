@@ -81,15 +81,9 @@
                     }
                 },
                 "comparisons": {
-                    "default": "all",
-                    "description": "`all`, or a list of `[x, y]` pairs of representation names.",
-                    "oneOf": [
-                        { "type": "string", "const": "all" },
-                        {
-                            "type": "array",
-                            "items": { "type": "array", "items": { "type": "string" }, "minItems": 2, "maxItems": 2 }
-                        }
-                    ]
+                    "type": "array",
+                    "description": "`[x, y]` pairs of representation names to compare. Unset: every pair; `[]`: none.",
+                    "items": { "type": "array", "items": { "type": "string" }, "minItems": 2, "maxItems": 2 }
                 },
                 "compositions": {
                     "type": "array",

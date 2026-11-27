@@ -1,14 +1,14 @@
 // Parameter helpers for main.nf: checks beyond the schema, comparison pairs, inline configs and structure files.
 
-// Pairs of representation names to compare: 'all', or a list of [x, y].
+// Pairs of representation names to compare: the given [x, y] pairs, or every pair when unset.
 def comparisonPairs(p) {
-    def names = p.representations.collect { r -> r.name }
-    if (p.comparisons == 'all') {
-        def pairs = []
-        names.eachWithIndex { x, i -> names.drop(i + 1).each { y -> pairs << [x, y] } }
-        return pairs
+    if (p.comparisons != null) {
+        return p.comparisons
     }
-    return (p.comparisons ?: []).collect { pair -> pair as List }
+    def names = p.representations.collect { r -> r.name }
+    def pairs = []
+    names.eachWithIndex { x, i -> names.drop(i + 1).each { y -> pairs << [x, y] } }
+    return pairs
 }
 
 // Checks nextflow_schema.json cannot express (run after validateParameters): input rows, uniqueness and
