@@ -8,6 +8,7 @@ on:
       - "main.nf"
       - "utils.nf"
       - "nextflow.config"
+      - "nextflow_schema.json"
       - "conf/**"
       - "modules/**"
       - "subworkflows/**"

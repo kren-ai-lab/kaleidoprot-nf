@@ -1,0 +1,190 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://raw.githubusercontent.com/kren-ai-lab/kaleidoprot-nf/main/nextflow_schema.json",
+    "title": "kaleidoprot-nf parameters",
+    "description": "Nextflow pipeline integrating Sylphy, Roxy, Eris and Ruddy for protein representation workflows",
+    "type": "object",
+    "$defs": {
+        "input_output_options": {
+            "title": "Input/output options",
+            "type": "object",
+            "required": ["input", "outdir"],
+            "properties": {
+                "input": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "pattern": "^\\S+\\.(csv|tsv|txt|parquet)$",
+                    "description": "Table (csv/tsv/parquet) with an `id` column and a sequence column; may carry labels."
+                },
+                "seq_column": {
+                    "type": "string",
+                    "default": "sequence",
+                    "description": "Sequence column of `input`."
+                },
+                "label_column": {
+                    "type": "string",
+                    "description": "Column of `input` used to colour the figures."
+                },
+                "structures": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "pattern": "^\\S+\\.csv$",
+                    "description": "Eris manifest `id,path[,chain,model]`; relative paths resolve against the manifest. Required for `tool: eris`."
+                },
+                "outdir": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "default": "results",
+                    "description": "Output directory."
+                },
+                "publish_dir_mode": {
+                    "type": "string",
+                    "default": "copy",
+                    "enum": ["symlink", "rellink", "link", "copy", "copyNoFollow", "move"],
+                    "description": "How results are published to `outdir`."
+                },
+                "cache_dir": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "pattern": "^/",
+                    "description": "Absolute path of a persistent cache for the models `sylphy embed` downloads; by default each task downloads its own."
+                }
+            }
+        },
+        "workflow_definition": {
+            "title": "Workflow definition",
+            "description": "Normally given with -params-file (see examples/test/params.yaml).",
+            "type": "object",
+            "required": ["representations"],
+            "properties": {
+                "representations": {
+                    "type": "array",
+                    "minItems": 1,
+                    "description": "Representations to generate.",
+                    "items": {
+                        "type": "object",
+                        "required": ["name", "tool", "config"],
+                        "additionalProperties": false,
+                        "properties": {
+                            "name": { "type": "string", "pattern": "^(?!.*__)[A-Za-z0-9][A-Za-z0-9_-]*$", "errorMessage": "use letters, digits, _ and -, without __" },
+                            "tool": { "type": "string", "enum": ["sylphy-encode", "sylphy-embed", "roxy", "eris"] },
+                            "config": {
+                                "type": ["object", "string"],
+                                "minLength": 1,
+                                "description": "The tool's options inline, or the path to its --config file."
+                            },
+                            "features_source": { "type": "string", "enum": ["auto", "global_embedding", "pooled_attr", "graph_attr"] },
+                            "pool": { "type": "string", "enum": ["mean", "mean_std", "sum", "max"] }
+                        }
+                    }
+                },
+                "comparisons": {
+                    "default": "all",
+                    "description": "`all`, or a list of `[x, y]` pairs of representation names.",
+                    "oneOf": [
+                        { "type": "string", "const": "all" },
+                        {
+                            "type": "array",
+                            "items": { "type": "array", "items": { "type": "string" }, "minItems": 2, "maxItems": 2 }
+                        }
+                    ]
+                },
+                "compositions": {
+                    "type": "array",
+                    "description": "Joint feature matrices built from representation blocks.",
+                    "items": {
+                        "type": "object",
+                        "required": ["name", "blocks"],
+                        "additionalProperties": false,
+                        "properties": {
+                            "name": { "type": "string", "pattern": "^(?!.*__)[A-Za-z0-9][A-Za-z0-9_-]*$", "errorMessage": "use letters, digits, _ and -, without __" },
+                            "blocks": {
+                                "type": "array",
+                                "minItems": 2,
+                                "items": {
+                                    "type": "object",
+                                    "required": ["representation"],
+                                    "additionalProperties": false,
+                                    "not": { "required": ["reduce", "select"] },
+                                    "errorMessage": "a block takes reduce or select, not both",
+                                    "properties": {
+                                        "representation": { "type": "string" },
+                                        "reduce": { "type": "integer", "minimum": 1 },
+                                        "reduce_scaling": { "type": "string", "enum": ["none", "standard", "robust", "minmax"] },
+                                        "select": { "type": "boolean" }
+                                    }
+                                }
+                            },
+                            "scaling": { "type": "string", "enum": ["none", "standard", "block"] },
+                            "alignment": { "type": "string", "enum": ["strict", "partial"] },
+                            "n_components": { "type": "integer", "minimum": 2 }
+                        }
+                    }
+                }
+            }
+        },
+        "analysis_options": {
+            "title": "Analysis options",
+            "type": "object",
+            "properties": {
+                "alignment": {
+                    "type": "string",
+                    "default": "strict",
+                    "enum": ["strict", "partial"],
+                    "description": "strict: every representation must cover the same ids; partial: intersection."
+                },
+                "projection_components": {
+                    "type": "integer",
+                    "default": 2,
+                    "minimum": 2,
+                    "description": "PCA components of each composition."
+                },
+                "comparison_components": {
+                    "type": "integer",
+                    "default": 5,
+                    "minimum": 2,
+                    "description": "PCA components of each representation; pairs are compared on these scores."
+                },
+                "projection_scaling": {
+                    "type": "string",
+                    "default": "standard",
+                    "enum": ["none", "standard", "robust", "minmax"],
+                    "description": "Scaling before each representation's PCA."
+                },
+                "mantel_permutations": { "type": "integer", "default": 999, "minimum": 1 },
+                "eda_max_columns": { "type": "integer", "default": 5000, "minimum": 1 },
+                "seed": { "type": "integer", "default": 0 },
+                "selection": {
+                    "type": "object",
+                    "description": "Feature filtering of `select: true` blocks.",
+                    "additionalProperties": false,
+                    "properties": {
+                        "max_missing": { "type": "number", "minimum": 0, "maximum": 1 },
+                        "near_constant": { "type": "number", "minimum": 0, "maximum": 1 },
+                        "abs_rho": { "type": "number", "minimum": 0, "maximum": 1 },
+                        "method": { "type": "string", "enum": ["spearman", "pearson"] },
+                        "max_features": { "type": ["integer", "null"], "minimum": 1 }
+                    }
+                }
+            }
+        },
+        "generic_options": {
+            "title": "Generic options",
+            "type": "object",
+            "properties": {
+                "help": {
+                    "type": ["boolean", "string"],
+                    "description": "Show this help, or the help of one parameter (`--help input`)."
+                }
+            }
+        }
+    },
+    "allOf": [
+        { "$ref": "#/$defs/input_output_options" },
+        { "$ref": "#/$defs/workflow_definition" },
+        { "$ref": "#/$defs/analysis_options" },
+        { "$ref": "#/$defs/generic_options" }
+    ]
+}

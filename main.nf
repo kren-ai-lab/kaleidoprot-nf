@@ -16,8 +16,17 @@ include { COMPOSE      } from './subworkflows/compose'
 include { KPNF_REPORT  } from './modules/kpnf'
 
 include { checkParams ; comparisonPairs ; inlineConfig } from './utils'
+include { paramsHelp ; validateParameters                } from 'plugin/nf-schema'
 
 workflow {
+    if (params.help) {
+        log.info(paramsHelp(
+            parameter: params.help.toString() in ['true', 'false'] ? null : params.help,
+            command: 'nextflow run kren-ai-lab/kaleidoprot-nf -profile docker -params-file params.yaml',
+        ))
+        exit(0)
+    }
+    validateParameters()
     def errors = checkParams(params)
     if (errors) {
         error("Invalid parameters:\n  - " + errors.join('\n  - '))
