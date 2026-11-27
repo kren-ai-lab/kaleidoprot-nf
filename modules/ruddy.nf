@@ -1,11 +1,12 @@
 // Ruddy: EDA, projections and comparison of representation spaces.
-// Ruddy never drops or imputes; the decisions taken from its outputs live in kpnf.
+// Nothing is imputed. PCA excludes features with non-finite values (recorded in its provenance) rather than rows,
+// so every id stays; the other decisions taken from Ruddy's outputs live in kpnf.
 // An analysis the data does not allow (exit 3) is recorded as <name>.failed for the report instead of stopping the run.
 
 process RUDDY_EDA {
     tag "${meta.name}"
     label 'process_medium'
-    container 'ghcr.io/kren-ai-lab/ruddy:0.2.1'
+    container 'ghcr.io/kren-ai-lab/ruddy:0.2.2'
     publishDir "${params.outdir}/eda", mode: params.publish_dir_mode
 
     input:
@@ -34,7 +35,7 @@ process RUDDY_EDA {
 process RUDDY_PCA {
     tag "${meta.id}"
     label 'process_medium'
-    container 'ghcr.io/kren-ai-lab/ruddy:0.2.1'
+    container 'ghcr.io/kren-ai-lab/ruddy:0.2.2'
     publishDir "${params.outdir}/projections", mode: params.publish_dir_mode
 
     input:
@@ -51,6 +52,7 @@ process RUDDY_PCA {
         --id-column id \\
         --n-components ${meta.n_components} \\
         --scaling ${meta.scaling} \\
+        --non-finite exclude_features \\
         --random-state ${params.seed} \\
         --output-dir pca_${meta.id}
     """
@@ -65,7 +67,7 @@ process RUDDY_PCA {
 process RUDDY_COMPARE {
     tag "${x_name} vs ${y_name}"
     label 'process_medium'
-    container 'ghcr.io/kren-ai-lab/ruddy:0.2.1'
+    container 'ghcr.io/kren-ai-lab/ruddy:0.2.2'
     publishDir "${params.outdir}/comparisons", mode: params.publish_dir_mode
 
     input:

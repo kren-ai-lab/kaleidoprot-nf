@@ -5,7 +5,7 @@
 process ERIS_VALIDATE {
     tag "${meta.name}"
     label 'process_single'
-    container 'ghcr.io/kren-ai-lab/eris:0.2.0'
+    container 'ghcr.io/kren-ai-lab/eris:0.3.0'
 
     input:
     tuple val(meta), path(config)
@@ -27,7 +27,7 @@ process ERIS_VALIDATE {
 process ERIS_FEATURES {
     tag "${meta.name}"
     label 'process_medium'
-    container 'ghcr.io/kren-ai-lab/eris:0.2.0'
+    container 'ghcr.io/kren-ai-lab/eris:0.3.0'
     publishDir "${params.outdir}/representations", mode: params.publish_dir_mode
 
     input:
@@ -44,10 +44,11 @@ process ERIS_FEATURES {
 
     script:
     def source = meta.features_source && meta.features_source != 'auto' ? "--source ${meta.features_source}" : ''
+    def pool = meta.pool ? "--pool ${meta.pool}" : ''
     """
     soft-fail rep_${meta.name} eris batch encode ${manifest} --config ${config} --out ${meta.name}_artifacts
     [ -e rep_${meta.name}.failed ] || soft-fail rep_${meta.name} eris pack ${meta.name}_artifacts --out ${meta.name}_artifacts/index.csv
-    [ -e rep_${meta.name}.failed ] || soft-fail rep_${meta.name} eris features ${meta.name}_artifacts/index.csv --out ${meta.name}.csv ${source}
+    [ -e rep_${meta.name}.failed ] || soft-fail rep_${meta.name} eris features ${meta.name}_artifacts/index.csv --out ${meta.name}.csv ${source} ${pool}
     """
 
     stub:

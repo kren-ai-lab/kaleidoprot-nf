@@ -2,8 +2,8 @@
 #   uv venv -p 3.13 .venv && source .venv/bin/activate
 #   uv pip install -r envs/requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu   # CPU torch
 
-sylphy[embeddings]==1.2.1
+sylphy[embeddings]==1.2.2
 roxylib==0.4.0
-erislib==0.2.0
-ruddy==0.2.1
+erislib==0.3.0
+ruddy==0.2.2
 -e ./python

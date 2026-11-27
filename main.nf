@@ -33,7 +33,8 @@ workflow {
                 [
                     name: r.name,
                     tool: r.tool,
-                    features_source: r.features_source ?: 'auto'
+                    features_source: r.features_source ?: 'auto',
+                    pool: r.pool
                 ],
                 r.config instanceof Map ? inlineConfig(r.name, r.config) : file(r.config, checkIfExists: true)
             ]

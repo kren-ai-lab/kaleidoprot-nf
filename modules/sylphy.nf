@@ -4,7 +4,7 @@
 process SYLPHY_VALIDATE {
     tag "${meta.name}"
     label 'process_single'
-    container 'ghcr.io/kren-ai-lab/sylphy:1.2.1'
+    container 'ghcr.io/kren-ai-lab/sylphy:1.2.2'
 
     input:
     tuple val(meta), path(config)
@@ -27,7 +27,7 @@ process SYLPHY_VALIDATE {
 process SYLPHY_ENCODE {
     tag "${meta.name}"
     label 'process_medium'
-    container 'ghcr.io/kren-ai-lab/sylphy:1.2.1'
+    container 'ghcr.io/kren-ai-lab/sylphy:1.2.2'
     publishDir "${params.outdir}/representations", mode: params.publish_dir_mode
 
     input:
@@ -58,7 +58,7 @@ process SYLPHY_ENCODE {
 process SYLPHY_EMBED {
     tag "${meta.name}"
     label 'process_gpu'
-    container 'ghcr.io/kren-ai-lab/sylphy:1.2.1-full'
+    container 'ghcr.io/kren-ai-lab/sylphy:1.2.2-full'
     publishDir "${params.outdir}/representations", mode: params.publish_dir_mode
 
     input:
